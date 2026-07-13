@@ -1,5 +1,5 @@
 // ============================================
-// FIREBASE CONFIG — Frota App
+// FIREBASE CONFIG — SegAut-App
 // Config pública (safe pra front-end).
 // TODO: substituir pelos valores do seu projeto
 // (console.firebase.google.com → Configurações do projeto → Seus apps)

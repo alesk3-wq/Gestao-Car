@@ -203,7 +203,7 @@ Referência estética: apps tipo Uber Driver / iFood Entregador — fundo preto,
 <meta name="theme-color" content="#0a0a0a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Frota App">
+<meta name="apple-mobile-web-app-title" content="SegAut-App">
 <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
 <link rel="manifest" href="/manifest.json">
 ```
@@ -452,5 +452,6 @@ Qualquer mudança em `firestore.rules` exige `firebase deploy --only firestore:r
 - Ao alterar `js/pages/*.js`: isolar cada seção independente da tela em try/catch (ver `vehicle.js`) — uma falha numa seção (ex.: avarias) não pode impedir as outras (combustível, KM) de inicializar.
 - Todo `trip` fechado é imutável (auditoria). Correções são feitas por admin criando um registro de "ajuste".
 - Fotos no Storage: organizar em pastas por `vehicleId/tripId/` pra facilitar limpeza futura.
+- **Toda foto (avaria ou recibo) passa por `compressImage()` em `storage.js`** antes do upload — redimensiona pra no máximo 1600px no lado maior e reexporta como JPEG (qualidade 0.75), economizando Storage. Se o navegador não suportar `createImageBitmap` ou o resultado não ficar menor, sobe o arquivo original.
 - **Referência de código do usuário**: o repo `github.com/alesk3-wq/T35` tem exemplos práticos que devem ser reaproveitados — especialmente `instalar.html` (PWA install), `manifest.json`, padrão de `login.html` e a estrutura de `assets/css/design-system.css`. Reutilize a mesma abordagem de detecção de plataforma, overlay pós-install e fallback manual.
 - **Testar sempre no celular real** (ou emulador Chrome DevTools mobile). Desktop pode enganar sobre altura de teclado, safe areas, tap targets.
