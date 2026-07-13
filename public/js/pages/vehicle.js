@@ -68,11 +68,12 @@ function initFuel(trip) {
 }
 
 /* ── KM ── */
-// KM final é registrado só no fechamento do turno (tela Resumo).
-// Aqui cuidamos só do KM inicial, com handoff do turno anterior.
+// KM inicial e final ficam juntos aqui. Se o condutor esquecer o KM final,
+// a tela Resumo avisa antes de fechar o turno (ver summary.js).
 
 async function initKm(trip) {
   const kmStartEl = document.getElementById('kmStart');
+  const kmEndEl = document.getElementById('kmEnd');
   const kmHintEl = document.getElementById('kmHandoffHint');
 
   if (trip.kmStart != null) {
@@ -90,18 +91,26 @@ async function initKm(trip) {
     }
   }
 
+  if (trip.kmEnd != null) kmEndEl.value = trip.kmEnd;
+
   document.getElementById('btnSaveKm').addEventListener('click', async () => {
     const kmStart = kmStartEl.value ? Number(kmStartEl.value) : null;
+    const kmEnd = kmEndEl.value ? Number(kmEndEl.value) : null;
 
     if (kmStart == null) {
       showToast('Informe o KM inicial.', 'error');
       return;
     }
+    if (kmEnd != null && kmEnd < kmStart) {
+      showToast('KM final não pode ser menor que o inicial.', 'error');
+      return;
+    }
 
     try {
-      await updateTrip(trip.id, { kmStart });
+      await updateTrip(trip.id, { kmStart, kmEnd });
       trip.kmStart = kmStart;
-      showToast('KM inicial salvo.', 'success');
+      trip.kmEnd = kmEnd;
+      showToast('KM salvo.', 'success');
     } catch (e) {
       console.error('Erro ao salvar KM:', e);
       showToast('Erro ao salvar. Tente novamente.', 'error');

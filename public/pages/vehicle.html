@@ -75,8 +75,13 @@
                     </div>
                     <p class="form-hint" id="kmHandoffHint" style="display:none"></p>
                 </div>
-                <p class="form-hint" style="margin: 0 var(--pad-md)">O KM final é registrado no fechamento do turno, na tela Resumo.</p>
-                <button class="btn btn-primary section-gap" id="btnSaveKm">Salvar KM inicial</button>
+                <div class="card">
+                    <div class="form-group" style="margin-bottom:0">
+                        <label for="kmEnd">KM final (painel no retorno)</label>
+                        <input type="number" id="kmEnd" inputmode="numeric" placeholder="Preenchido no retorno">
+                    </div>
+                </div>
+                <button class="btn btn-primary section-gap" id="btnSaveKm">Salvar KM</button>
             </section>
         </div>
     </main>

@@ -58,10 +58,10 @@ async function render() {
 }
 
 // Lista o que falta preencher antes de fechar
-// (KM final tem campo próprio nesta página, não entra na lista)
 function renderPending() {
   const missing = [];
   if (trip.kmStart == null) missing.push('KM inicial');
+  if (trip.kmEnd == null) missing.push('KM final');
   if (!trip.fuelStart) missing.push('Combustível de saída');
   if (!trip.fuelEnd) missing.push('Combustível de retorno');
 
@@ -84,27 +84,10 @@ function initClose() {
   const backdrop = document.getElementById('confirmBackdrop');
   const sheet = document.getElementById('confirmSheet');
   const btnClose = document.getElementById('btnCloseTrip');
-  const kmEndEl = document.getElementById('kmEndInput');
-
-  if (trip.kmEnd != null) kmEndEl.value = trip.kmEnd;
 
   btnClose.addEventListener('click', () => {
-    const kmEnd = kmEndEl.value ? Number(kmEndEl.value) : null;
-
-    if (trip.kmStart == null) {
-      showToast('Registre o KM inicial na tela Veículo primeiro.', 'error');
-      return;
-    }
-    if (kmEnd == null) {
-      showToast('Informe o KM final.', 'error');
-      return;
-    }
-    if (kmEnd < trip.kmStart) {
-      showToast('KM final não pode ser menor que o inicial.', 'error');
-      return;
-    }
-    if (!trip.fuelEnd) {
-      showToast('Registre o combustível de retorno na tela Veículo primeiro.', 'error');
+    if (trip.kmEnd == null || !trip.fuelEnd) {
+      showToast('Registre KM final e combustível de retorno na tela Veículo primeiro.', 'error');
       return;
     }
     backdrop.classList.add('open');
@@ -123,21 +106,14 @@ function initClose() {
     btn.disabled = true;
     btn.textContent = 'Fechando...';
 
-    // Relê o campo (não confia num valor capturado antes de abrir o sheet).
-    const kmEnd = Number(kmEndEl.value);
-
     try {
-      await closeTrip(trip.id, { kmEnd, fuelEnd: trip.fuelEnd });
-      trip.kmEnd = kmEnd;
+      await closeTrip(trip.id, { kmEnd: trip.kmEnd, fuelEnd: trip.fuelEnd });
       trip.status = 'closed';
       closeSheet();
-      document.getElementById('sumKm').textContent = (kmEnd - trip.kmStart).toLocaleString('pt-BR');
-      document.getElementById('sumKmDetail').textContent = `${trip.kmStart} → ${kmEnd}`;
       document.getElementById('sumStatus').textContent = 'Fechado';
       document.getElementById('sumStatus').className = 'badge badge-muted';
       document.getElementById('closedBanner').style.display = 'flex';
       btnClose.style.display = 'none';
-      kmEndEl.disabled = true;
       // TODO v3: botão "Exportar PDF" (jsPDF via CDN) com layout do checklist original
       showToast('Turno fechado com sucesso.', 'success');
     } catch (error) {

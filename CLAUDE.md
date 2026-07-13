@@ -353,8 +353,9 @@ Três sub-abas (tabs no topo, controladas por JS — não são páginas separada
 - Registra `fuelStart` no início e `fuelEnd` no fechamento
 
 **c) KM / Percurso**
-- Só o `kmStart` é registrado aqui (`inputmode="numeric"` pra abrir teclado numérico). `kmEnd` é preenchido no fechamento do turno, na tela Resumo (ver 6.9) — não faz sentido pedir o KM final no meio do turno.
+- `kmStart` e `kmEnd` registrados juntos aqui (`inputmode="numeric"` pra abrir teclado numérico), um botão "Salvar KM" pros dois.
 - **Handoff de KM**: se o turno ainda não tem `kmStart`, busca o último turno fechado do mesmo veículo (`getLastClosedTrip` em `db.js`) e pré-preenche o campo com o `kmEnd` daquele turno, mostrando uma dica ("Último KM registrado: X — confira com o painel"). O condutor só sobrescreve se o painel não bater — sem modal de confirmação, o campo já vem editável.
+- Se o condutor esquecer o KM final aqui, a tela Resumo mostra um aviso antes de fechar o turno (ver 6.9) — não bloqueia o app, só avisa na hora de fechar.
 
 ### 6.7 Paradas (`pages/stops.html`)
 - Lista de paradas do turno atual (cards verticais)
@@ -374,8 +375,8 @@ Três sub-abas (tabs no topo, controladas por JS — não são páginas separada
 
 ### 6.9 Resumo / Fechamento (`pages/summary.html`)
 - Mostra todos os dados do turno consolidados (KM rodados, tempo, combustível saída/retorno, gastos totais, avarias registradas)
-- Campo de **KM final** (`kmEndInput`) fica nesta tela, não na tela Veículo — é o último dado que falta antes de fechar
-- Botão **"Fechar Turno"** grande, cor `--warning` (amarelo) → valida KM inicial já registrado, KM final preenchido (e `>= kmStart`) e combustível de retorno → abre confirmação → grava `kmEnd`, `fuelEnd`, `endTime`, muda `status` para `closed`
+- `kmStart`/`kmEnd`/`fuelEnd` são preenchidos na tela Veículo, não aqui — esta tela só lê e valida. Se algo estiver faltando (KM inicial, KM final, combustível de saída/retorno), aparece um card de aviso listando o que falta, com link "Ir para Veículo"
+- Botão **"Fechar Turno"** grande, cor `--warning` (amarelo) → só habilita a confirmação se `kmEnd` e `fuelEnd` já estiverem salvos → confirmação → grava `endTime`, muda `status` para `closed`
 - Após fechado: botão **"Exportar PDF"** → gera PDF com layout similar ao checklist original (ainda TODO, ver seção 10)
 
 ### 6.10 Admin — Cadastros e Histórico
