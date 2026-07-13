@@ -353,8 +353,8 @@ Três sub-abas (tabs no topo, controladas por JS — não são páginas separada
 - Registra `fuelStart` no início e `fuelEnd` no fechamento
 
 **c) KM / Percurso**
-- Input numérico para `kmStart` e `kmEnd` (`inputmode="numeric"` pra abrir teclado numérico)
-- Mostra KM rodados quando o turno fecha
+- Só o `kmStart` é registrado aqui (`inputmode="numeric"` pra abrir teclado numérico). `kmEnd` é preenchido no fechamento do turno, na tela Resumo (ver 6.9) — não faz sentido pedir o KM final no meio do turno.
+- **Handoff de KM**: se o turno ainda não tem `kmStart`, busca o último turno fechado do mesmo veículo (`getLastClosedTrip` em `db.js`) e pré-preenche o campo com o `kmEnd` daquele turno, mostrando uma dica ("Último KM registrado: X — confira com o painel"). O condutor só sobrescreve se o painel não bater — sem modal de confirmação, o campo já vem editável.
 
 ### 6.7 Paradas (`pages/stops.html`)
 - Lista de paradas do turno atual (cards verticais)
@@ -374,8 +374,9 @@ Três sub-abas (tabs no topo, controladas por JS — não são páginas separada
 
 ### 6.9 Resumo / Fechamento (`pages/summary.html`)
 - Mostra todos os dados do turno consolidados (KM rodados, tempo, combustível saída/retorno, gastos totais, avarias registradas)
-- Botão **"Fechar Turno"** grande, cor `--warning` (amarelo) → confirmação → grava `fuelEnd`, `kmEnd`, `endTime`, muda `status` para `closed`
-- Após fechado: botão **"Exportar PDF"** → gera PDF com layout similar ao checklist original
+- Campo de **KM final** (`kmEndInput`) fica nesta tela, não na tela Veículo — é o último dado que falta antes de fechar
+- Botão **"Fechar Turno"** grande, cor `--warning` (amarelo) → valida KM inicial já registrado, KM final preenchido (e `>= kmStart`) e combustível de retorno → abre confirmação → grava `kmEnd`, `fuelEnd`, `endTime`, muda `status` para `closed`
+- Após fechado: botão **"Exportar PDF"** → gera PDF com layout similar ao checklist original (ainda TODO, ver seção 10)
 
 ### 6.10 Admin — Cadastros e Histórico
 - `pages/admin/vehicles.html`: CRUD de veículos (lista + FAB pra adicionar)
@@ -384,7 +385,9 @@ Três sub-abas (tabs no topo, controladas por JS — não são páginas separada
 
 ## 7. Features Extras Combinadas
 
-1. **Handoff automático de turno**: ao iniciar, mostrar fotos e avarias do fechamento anterior lado a lado com o que o condutor está registrando agora.
+1. **Handoff automático de turno**:
+   - **KM** (implementado): ao iniciar turno sem `kmStart`, sugere automaticamente o `kmEnd` do último turno fechado do mesmo veículo (`getLastClosedTrip`), editável.
+   - **Fotos/avarias** (ainda TODO): mostrar fotos e avarias do fechamento anterior lado a lado com o que o condutor está registrando agora.
 2. **Diagrama do carro clicável** para marcar localização de avarias (SVG em `assets/images/car-diagram.svg`).
 3. **Timestamp + geolocalização** nas fotos (usar `navigator.geolocation` e gravar coords no Storage metadata).
 4. **Notificação ao gestor** quando avaria nova é registrada (via Cloud Functions + FCM, ou simples email via SendGrid — deixar como TODO na v1).
@@ -403,14 +406,15 @@ Três sub-abas (tabs no topo, controladas por JS — não são páginas separada
 - **Comentários**: só onde a intenção não é óbvia. Sem redundância.
 - **Sem dependências extras** na v1 além do Firebase SDK. Se precisar de PDF export, avaliar `jsPDF` via CDN.
 
-## 9. Regras de Segurança Firestore (base)
+## 9. Regras de Segurança Firestore (implementado em `firestore.rules`)
 
-- Condutor só lê/escreve seus próprios `trips` e `damages`
-- Condutor lê `vehicles` (para saber qual está atribuído) mas não escreve
-- Admin lê/escreve tudo
-- Ninguém deleta `trips` fechados (auditoria)
+- Condutor lê/escreve seus próprios `trips` **enquanto abertos**. Turnos com `status == 'closed'` ficam legíveis por **qualquer condutor logado** (não só o dono) — necessário pro handoff de KM entre turnos de condutores diferentes.
+- Condutor lê e cria `damages` (qualquer condutor logado lê todas, pro handoff de avarias do veículo); só admin edita/resolve.
+- Condutor lê `vehicles` e `drivers` mas não escreve (exceto o próprio perfil, sem poder trocar `role` sozinho).
+- Admin lê/escreve tudo.
+- Ninguém deleta `trips` fechados (auditoria) — nem admin.
 
-Escrever regras em `firestore.rules` com essa lógica antes do deploy.
+Qualquer mudança em `firestore.rules` exige `firebase deploy --only firestore:rules` (deploy separado do `hosting`) — já aconteceu de uma feature parecer "quebrada" só porque a regra nova não tinha sido publicada.
 
 ## 10. Roadmap Sugerido de Implementação
 
@@ -435,8 +439,11 @@ Escrever regras em `firestore.rules` com essa lógica antes do deploy.
 
 ## 11. Notas Importantes
 
+- **Projeto Firebase**: `segaut-35`. Hosting: https://segaut-35.web.app. Repositório: `github.com/alesk3-wq/Gestao-Car`.
 - Não versionar chaves privadas. `firebase-config.js` só contém config pública (safe pra front-end).
 - Antes de qualquer feature nova, verificar se já existe util em `js/utils.js` ou `js/db.js` — evitar duplicação.
+- **Evitar `orderBy()` combinado com `where()` em campo diferente nas queries do Firestore** — exige índice composto que não existe por padrão e derruba a query em produção (`FirebaseError: The query requires an index`). Preferir buscar só com `where()`/`limit()` e ordenar no cliente em JS (ver funções em `db.js` como padrão) — mais simples que gerenciar `firestore.indexes.json` pro volume de dados deste app.
+- Ao alterar `js/pages/*.js`: isolar cada seção independente da tela em try/catch (ver `vehicle.js`) — uma falha numa seção (ex.: avarias) não pode impedir as outras (combustível, KM) de inicializar.
 - Todo `trip` fechado é imutável (auditoria). Correções são feitas por admin criando um registro de "ajuste".
 - Fotos no Storage: organizar em pastas por `vehicleId/tripId/` pra facilitar limpeza futura.
 - **Referência de código do usuário**: o repo `github.com/alesk3-wq/T35` tem exemplos práticos que devem ser reaproveitados — especialmente `instalar.html` (PWA install), `manifest.json`, padrão de `login.html` e a estrutura de `assets/css/design-system.css`. Reutilize a mesma abordagem de detecção de plataforma, overlay pós-install e fallback manual.
