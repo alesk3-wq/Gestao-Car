@@ -45,8 +45,18 @@ function renderFuelOptions(container, selected, onSelect) {
   });
 }
 
-function initFuel(trip) {
-  renderFuelOptions(document.getElementById('fuelStartOptions'), trip.fuelStart, async (level) => {
+function initFuel(trip, lastTrip) {
+  // Handoff: sugere o nível declarado pelo condutor anterior (pré-seleciona,
+  // sem salvar) — condutor confirma tocando de novo ou corrige tocando noutro.
+  let fuelStartSuggested = trip.fuelStart;
+  if (fuelStartSuggested == null && lastTrip?.fuelEnd != null) {
+    fuelStartSuggested = lastTrip.fuelEnd;
+    const hint = document.getElementById('fuelHandoffHint');
+    hint.textContent = `Nível declarado pelo condutor anterior: ${FUEL_LABELS[lastTrip.fuelEnd]} — confira no veículo e confirme.`;
+    hint.style.display = 'block';
+  }
+
+  renderFuelOptions(document.getElementById('fuelStartOptions'), fuelStartSuggested, async (level) => {
     try {
       await updateTrip(trip.id, { fuelStart: level });
       trip.fuelStart = level;
@@ -71,24 +81,17 @@ function initFuel(trip) {
 // KM inicial e final ficam juntos aqui. Se o condutor esquecer o KM final,
 // a tela Resumo avisa antes de fechar o turno (ver summary.js).
 
-async function initKm(trip) {
+function initKm(trip, lastTrip) {
   const kmStartEl = document.getElementById('kmStart');
   const kmEndEl = document.getElementById('kmEnd');
   const kmHintEl = document.getElementById('kmHandoffHint');
 
   if (trip.kmStart != null) {
     kmStartEl.value = trip.kmStart;
-  } else {
-    try {
-      const lastTrip = await getLastClosedTrip(trip.vehicleId);
-      if (lastTrip?.kmEnd != null) {
-        kmStartEl.value = lastTrip.kmEnd;
-        kmHintEl.textContent = `Último KM registrado (turno anterior): ${lastTrip.kmEnd.toLocaleString('pt-BR')} — confira com o painel.`;
-        kmHintEl.style.display = 'block';
-      }
-    } catch (e) {
-      console.error('Erro ao buscar KM do turno anterior:', e);
-    }
+  } else if (lastTrip?.kmEnd != null) {
+    kmStartEl.value = lastTrip.kmEnd;
+    kmHintEl.textContent = `Último KM registrado (turno anterior): ${lastTrip.kmEnd.toLocaleString('pt-BR')} — confira com o painel.`;
+    kmHintEl.style.display = 'block';
   }
 
   if (trip.kmEnd != null) kmEndEl.value = trip.kmEnd;
@@ -268,11 +271,22 @@ if (!trip) {
   document.getElementById('vehicleTitle').textContent = trip.vehicleModel || 'Veículo';
   document.getElementById('vehiclePlateBadge').textContent = trip.vehiclePlate || '';
 
+  // Turno anterior do mesmo veículo — usado pro handoff de KM e combustível.
+  // Só busca se algum dos dois ainda não foi preenchido neste turno.
+  let lastTrip = null;
+  if (trip.kmStart == null || !trip.fuelStart) {
+    try {
+      lastTrip = await getLastClosedTrip(trip.vehicleId);
+    } catch (e) {
+      console.error('Erro ao buscar turno anterior:', e);
+    }
+  }
+
   // Cada seção é isolada: um erro numa (ex.: avarias) nunca impede as outras
   // (combustível, KM) de inicializar.
   try { initTabs(); } catch (e) { console.error('initTabs falhou:', e); }
-  try { initFuel(trip); } catch (e) { console.error('initFuel falhou:', e); }
-  try { await initKm(trip); } catch (e) { console.error('initKm falhou:', e); }
+  try { initFuel(trip, lastTrip); } catch (e) { console.error('initFuel falhou:', e); }
+  try { initKm(trip, lastTrip); } catch (e) { console.error('initKm falhou:', e); }
   try {
     await initDamages(trip, driver);
   } catch (e) {

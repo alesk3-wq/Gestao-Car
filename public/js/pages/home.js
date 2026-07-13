@@ -1,5 +1,5 @@
 import { requireAuth, logout } from '/js/auth.js';
-import { getOpenTrip, listVehicles, createTrip } from '/js/db.js';
+import { getOpenTrip, listVehicles, listDrivers, createTrip } from '/js/db.js';
 import { renderBottomNav } from '/js/nav.js';
 import {
   escapeHtml, formatCurrency, formatDuration, todayISO, showToast, registerServiceWorker
@@ -13,6 +13,7 @@ const els = {
   noTrip: document.getElementById('noTripSection'),
   openTrip: document.getElementById('openTripSection'),
   vehicleSelect: document.getElementById('vehicleSelect'),
+  secondDriverSelect: document.getElementById('secondDriverSelect'),
   btnStart: document.getElementById('btnStartTrip'),
   btnContinue: document.getElementById('btnContinueTrip')
 };
@@ -68,9 +69,24 @@ async function renderStartFlow() {
     els.vehicleSelect.value = driver.defaultVehicleId;
   }
 
+  // Segundo condutor / copiloto (opcional, só registro)
+  try {
+    const drivers = await listDrivers();
+    const others = drivers.filter((d) => d.id !== driver.id && d.active);
+    els.secondDriverSelect.innerHTML = '<option value="">Nenhum</option>' + others.map((d) => `
+      <option value="${d.id}">${escapeHtml(d.name)}</option>
+    `).join('');
+  } catch (error) {
+    console.error('Erro ao carregar condutores:', error);
+  }
+
   els.btnStart.addEventListener('click', async () => {
     const vehicle = vehicles.find((v) => v.id === els.vehicleSelect.value);
     if (!vehicle) return;
+
+    const secondDriverId = els.secondDriverSelect.value || null;
+    const secondDriverOption = els.secondDriverSelect.selectedOptions[0];
+    const secondDriverName = secondDriverId ? secondDriverOption.textContent : null;
 
     els.btnStart.disabled = true;
     els.btnStart.textContent = 'Iniciando...';
@@ -79,6 +95,8 @@ async function renderStartFlow() {
       await createTrip({
         driverId: driver.id,
         driverName: driver.name,
+        secondDriverId,
+        secondDriverName,
         vehicleId: vehicle.id,
         vehiclePlate: vehicle.plate,
         vehicleModel: vehicle.model,

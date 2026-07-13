@@ -27,6 +27,10 @@ async function render() {
   document.getElementById('sumPlate').textContent = trip.vehiclePlate || '';
   document.getElementById('sumDriver').textContent = trip.driverName || driver.name;
   document.getElementById('sumStart').textContent = formatDateTime(trip.startTime);
+  if (trip.secondDriverName) {
+    document.getElementById('sumSecondDriver').textContent = trip.secondDriverName;
+    document.getElementById('sumSecondDriverRow').hidden = false;
+  }
   document.getElementById('sumDuration').textContent = formatDuration(trip.startTime, trip.endTime);
 
   const km = trip.kmStart != null && trip.kmEnd != null ? trip.kmEnd - trip.kmStart : null;

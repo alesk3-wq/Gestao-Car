@@ -73,6 +73,7 @@ function renderTrips(trips) {
           <div>
             <strong>${escapeHtml(t.driverName || '—')}</strong>
             <p class="list-sub">${escapeHtml(t.vehicleModel || '')} · ${escapeHtml(t.vehiclePlate || '')}</p>
+            ${t.secondDriverName ? `<p class="list-sub">Copiloto: ${escapeHtml(t.secondDriverName)}</p>` : ''}
           </div>
           <span class="badge ${t.status === 'open' ? 'badge-accent' : 'badge-muted'}">
             ${t.status === 'open' ? 'Aberto' : 'Fechado'}

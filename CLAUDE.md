@@ -241,6 +241,8 @@ Referência estética: apps tipo Uber Driver / iFood Entregador — fundo preto,
   id: "auto",
   driverId: "drv_123",
   driverName: "João Silva",           // desnormalizado para facilitar listagem
+  secondDriverId: "drv_456" | null,   // segundo condutor/copiloto — só registro, não loga nem opera o app
+  secondDriverName: "Maria Souza" | null,
   vehicleId: "veh_456",
   vehiclePlate: "ABC-1D23",           // desnormalizado
   date: "2026-07-10",
@@ -334,6 +336,7 @@ Fluxo:
 ### 6.5 Home do Condutor (`pages/home.html`)
 - Saudação com nome do condutor (auto-preenchido do Auth)
 - Card do veículo atribuído (se houver `defaultVehicleId`) ou dropdown pra escolher
+- Card opcional **"Segundo condutor / copiloto"**: dropdown com os demais condutores ativos (`listDrivers()`, excluindo o próprio). Puro registro — grava `secondDriverId`/`secondDriverName` no `trip`, o copiloto não loga nem interage com o app. Relevante pra plantões longos (>24h) onde há dois condutores no mesmo turno.
 - Botão grande **"Iniciar Turno"** (cria `trip` com `status: "open"`) — sticky no bottom, acima do nav
 - Se já houver turno aberto: card grande do turno em andamento + botão **"Continuar Turno"**
 - Bottom-nav com 5 abas: Início | Veículo | Paradas | Despesas | Resumo
@@ -351,6 +354,7 @@ Três sub-abas (tabs no topo, controladas por JS — não são páginas separada
 **b) Combustível**
 - Slider visual com 5 posições (Vazio, 1/4, 1/2, 3/4, Cheio) — igual ao PDF de referência
 - Registra `fuelStart` no início e `fuelEnd` no fechamento
+- **Handoff de combustível**: se `fuelStart` ainda não foi salvo neste turno, pré-seleciona (sem salvar) o nível declarado como `fuelEnd` pelo condutor do último turno fechado do veículo, com uma dica ("Nível declarado pelo condutor anterior: X — confira no veículo e confirme"). Condutor toca no mesmo botão pra confirmar ou noutro pra corrigir — mesmo padrão do handoff de KM (sem modal). Relevante porque nem sempre o combustível fica no nível combinado pro próximo turno.
 
 **c) KM / Percurso**
 - `kmStart` e `kmEnd` registrados juntos aqui (`inputmode="numeric"` pra abrir teclado numérico), um botão "Salvar KM" pros dois.
@@ -386,8 +390,9 @@ Três sub-abas (tabs no topo, controladas por JS — não são páginas separada
 
 ## 7. Features Extras Combinadas
 
-1. **Handoff automático de turno**:
-   - **KM** (implementado): ao iniciar turno sem `kmStart`, sugere automaticamente o `kmEnd` do último turno fechado do mesmo veículo (`getLastClosedTrip`), editável.
+1. **Handoff automático de turno**: `getLastClosedTrip` (em `db.js`) busca o último turno fechado do veículo pra sugerir valores — sempre editável, sem modal de confirmação (o condutor toca de novo pra confirmar ou corrige tocando/digitando outro valor).
+   - **KM** (implementado): sugere o `kmEnd` do turno anterior como `kmStart`.
+   - **Combustível** (implementado): sugere o `fuelEnd` do turno anterior como `fuelStart` — útil porque nem sempre o carro fica no nível combinado pro próximo condutor.
    - **Fotos/avarias** (ainda TODO): mostrar fotos e avarias do fechamento anterior lado a lado com o que o condutor está registrando agora.
 2. **Diagrama do carro clicável** para marcar localização de avarias (SVG em `assets/images/car-diagram.svg`).
 3. **Timestamp + geolocalização** nas fotos (usar `navigator.geolocation` e gravar coords no Storage metadata).
