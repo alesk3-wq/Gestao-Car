@@ -7,6 +7,14 @@ import {
   showToast, registerServiceWorker
 } from '/js/utils.js';
 
+const TYPE_ICONS = {
+  'refeição': '🍽️',
+  'água/lanche': '🥤',
+  'pedágio': '🛣️',
+  'combustível': '⛽',
+  'outro': '📌'
+};
+
 registerServiceWorker();
 renderBottomNav();
 
@@ -52,14 +60,6 @@ function init() {
 function total() {
   return (trip.expenses || []).reduce((sum, e) => sum + (e.value || 0), 0);
 }
-
-const TYPE_ICONS = {
-  'refeição': '🍽️',
-  'água/lanche': '🥤',
-  'pedágio': '🛣️',
-  'combustível': '⛽',
-  'outro': '📌'
-};
 
 function renderList() {
   document.getElementById('totalValue').textContent = formatCurrency(total());

@@ -10,32 +10,6 @@ import {
 registerServiceWorker();
 renderBottomNav();
 
-const { driver } = await requireAuth();
-const trip = await getOpenTrip(driver.id);
-
-document.getElementById('loading').style.display = 'none';
-
-if (!trip) {
-  document.getElementById('noTripMsg').style.display = 'block';
-  document.querySelector('.tabs').style.display = 'none';
-} else {
-  document.getElementById('content').style.display = 'block';
-  document.getElementById('vehicleTitle').textContent = trip.vehicleModel || 'Veículo';
-  document.getElementById('vehiclePlateBadge').textContent = trip.vehiclePlate || '';
-
-  // Cada seção é isolada: um erro numa (ex.: avarias) nunca impede as outras
-  // (combustível, KM) de inicializar.
-  try { initTabs(); } catch (e) { console.error('initTabs falhou:', e); }
-  try { initFuel(); } catch (e) { console.error('initFuel falhou:', e); }
-  try { await initKm(); } catch (e) { console.error('initKm falhou:', e); }
-  try {
-    await initDamages();
-  } catch (e) {
-    console.error('initDamages falhou:', e);
-    showToast('Erro ao carregar avarias.', 'error');
-  }
-}
-
 /* ── Tabs ── */
 
 function initTabs() {
@@ -71,7 +45,7 @@ function renderFuelOptions(container, selected, onSelect) {
   });
 }
 
-function initFuel() {
+function initFuel(trip) {
   renderFuelOptions(document.getElementById('fuelStartOptions'), trip.fuelStart, async (level) => {
     try {
       await updateTrip(trip.id, { fuelStart: level });
@@ -97,7 +71,7 @@ function initFuel() {
 // KM final é registrado só no fechamento do turno (tela Resumo).
 // Aqui cuidamos só do KM inicial, com handoff do turno anterior.
 
-async function initKm() {
+async function initKm(trip) {
   const kmStartEl = document.getElementById('kmStart');
   const kmHintEl = document.getElementById('kmHandoffHint');
 
@@ -141,7 +115,7 @@ let selectedZone = null;
 let selectedFiles = [];
 let vehicleDamages = [];
 
-async function initDamages() {
+async function initDamages(trip, driver) {
   // Injeta o SVG inline pra permitir clique nas zonas
   const svgText = await fetch('/assets/images/car-diagram.svg').then((r) => r.text());
   const diagramEl = document.getElementById('carDiagram');
@@ -151,13 +125,13 @@ async function initDamages() {
     zone.addEventListener('click', () => openDamageSheet(zone.dataset.zone));
   });
 
-  await refreshDamages();
-  initDamageSheet();
+  await refreshDamages(trip);
+  initDamageSheet(trip, driver);
 }
 
-async function refreshDamages() {
+async function refreshDamages(trip) {
   vehicleDamages = await listDamagesByVehicle(trip.vehicleId);
-  renderDamagesList();
+  renderDamagesList(trip);
   markDamagedZones();
 }
 
@@ -168,7 +142,7 @@ function markDamagedZones() {
   });
 }
 
-function renderDamagesList() {
+function renderDamagesList(trip) {
   const list = document.getElementById('damagesList');
   const open = vehicleDamages.filter((d) => !d.resolved);
 
@@ -194,7 +168,7 @@ function renderDamagesList() {
   `).join('');
 }
 
-function initDamageSheet() {
+function initDamageSheet(trip, driver) {
   const backdrop = document.getElementById('damageBackdrop');
   const sheet = document.getElementById('damageSheet');
   const photosInput = document.getElementById('damagePhotos');
@@ -247,7 +221,7 @@ function initDamageSheet() {
 
       showToast('Avaria registrada.', 'success');
       close();
-      await refreshDamages();
+      await refreshDamages(trip);
     } catch (error) {
       console.error(error);
       showToast('Erro ao registrar avaria.', 'error');
@@ -266,4 +240,34 @@ function openDamageSheet(zone) {
   document.getElementById('photoPreviews').innerHTML = '';
   document.getElementById('damageBackdrop').classList.add('open');
   document.getElementById('damageSheet').classList.add('open');
+}
+
+/* ── Orquestração ── */
+// Roda por último, depois de todas as funções/consts acima já declaradas
+// (evita ReferenceError de temporal dead zone ao chamar init* cedo demais).
+
+const { driver } = await requireAuth();
+const trip = await getOpenTrip(driver.id);
+
+document.getElementById('loading').style.display = 'none';
+
+if (!trip) {
+  document.getElementById('noTripMsg').style.display = 'block';
+  document.querySelector('.tabs').style.display = 'none';
+} else {
+  document.getElementById('content').style.display = 'block';
+  document.getElementById('vehicleTitle').textContent = trip.vehicleModel || 'Veículo';
+  document.getElementById('vehiclePlateBadge').textContent = trip.vehiclePlate || '';
+
+  // Cada seção é isolada: um erro numa (ex.: avarias) nunca impede as outras
+  // (combustível, KM) de inicializar.
+  try { initTabs(); } catch (e) { console.error('initTabs falhou:', e); }
+  try { initFuel(trip); } catch (e) { console.error('initFuel falhou:', e); }
+  try { await initKm(trip); } catch (e) { console.error('initKm falhou:', e); }
+  try {
+    await initDamages(trip, driver);
+  } catch (e) {
+    console.error('initDamages falhou:', e);
+    showToast('Erro ao carregar avarias.', 'error');
+  }
 }
