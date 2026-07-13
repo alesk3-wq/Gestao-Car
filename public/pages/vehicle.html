@@ -73,18 +73,10 @@
                         <label for="kmStart">KM inicial (painel na saída)</label>
                         <input type="number" id="kmStart" inputmode="numeric" placeholder="Ex: 45230">
                     </div>
+                    <p class="form-hint" id="kmHandoffHint" style="display:none"></p>
                 </div>
-                <div class="card">
-                    <div class="form-group" style="margin-bottom:0">
-                        <label for="kmEnd">KM final (painel no retorno)</label>
-                        <input type="number" id="kmEnd" inputmode="numeric" placeholder="Preenchido no retorno">
-                    </div>
-                </div>
-                <div class="km-summary" id="kmSummary" style="display:none">
-                    <span class="km-value" id="kmDriven">0</span>
-                    <span class="km-unit">km rodados</span>
-                </div>
-                <button class="btn btn-primary section-gap" id="btnSaveKm">Salvar KM</button>
+                <p class="form-hint" style="margin: 0 var(--pad-md)">O KM final é registrado no fechamento do turno, na tela Resumo.</p>
+                <button class="btn btn-primary section-gap" id="btnSaveKm">Salvar KM inicial</button>
             </section>
         </div>
     </main>

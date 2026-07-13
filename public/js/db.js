@@ -3,7 +3,7 @@
 import { db } from './firebase-config.js';
 import {
   collection, doc, addDoc, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
-  query, where, orderBy, limit, serverTimestamp
+  query, where, limit, serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 function snapToList(snap) {
@@ -89,28 +89,30 @@ export function closeTrip(tripId, { kmEnd, fuelEnd }) {
   });
 }
 
-// Último turno fechado do veículo (pro handoff visual)
+// Último turno fechado do veículo (pro handoff de KM entre condutores).
+// Sem orderBy na query (evitaria precisar de índice composto) — ordena no cliente.
 export async function getLastClosedTrip(vehicleId) {
   const snap = await getDocs(query(
     collection(db, 'trips'),
     where('vehicleId', '==', vehicleId),
-    where('status', '==', 'closed'),
-    orderBy('closedAt', 'desc'),
-    limit(1)
+    where('status', '==', 'closed')
   ));
-  return snap.empty ? null : { id: snap.docs[0].id, ...snap.docs[0].data() };
+  const list = snapToList(snap)
+    .sort((a, b) => (b.closedAt?.toMillis?.() ?? 0) - (a.closedAt?.toMillis?.() ?? 0));
+  return list[0] ?? null;
 }
 
-// Histórico com filtros (admin)
+// Histórico com filtros (admin). Sem orderBy na query — ordena no cliente.
 export async function listTrips({ vehicleId = '', driverId = '', dateFrom = '', dateTo = '' } = {}) {
   const parts = [collection(db, 'trips')];
   if (vehicleId) parts.push(where('vehicleId', '==', vehicleId));
   if (driverId) parts.push(where('driverId', '==', driverId));
   if (dateFrom) parts.push(where('date', '>=', dateFrom));
   if (dateTo) parts.push(where('date', '<=', dateTo));
-  parts.push(orderBy('date', 'desc'), limit(100));
   const snap = await getDocs(query(...parts));
-  return snapToList(snap);
+  return snapToList(snap)
+    .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+    .slice(0, 100);
 }
 
 /* ── Avarias ── */
@@ -123,14 +125,15 @@ export function createDamage(data) {
   });
 }
 
+// Sem orderBy na query (evitaria precisar de índice composto) — ordena no cliente.
 export async function listDamagesByVehicle(vehicleId, { max = 50 } = {}) {
   const snap = await getDocs(query(
     collection(db, 'damages'),
-    where('vehicleId', '==', vehicleId),
-    orderBy('reportedAt', 'desc'),
-    limit(max)
+    where('vehicleId', '==', vehicleId)
   ));
-  return snapToList(snap);
+  return snapToList(snap)
+    .sort((a, b) => (b.reportedAt?.toMillis?.() ?? 0) - (a.reportedAt?.toMillis?.() ?? 0))
+    .slice(0, max);
 }
 
 export async function listDamagesByTrip(tripId) {

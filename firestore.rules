@@ -37,7 +37,12 @@ service cloud.firestore {
     // Turnos: condutor cria/edita os próprios enquanto abertos.
     // Turno fechado é imutável (auditoria) — nem admin edita/deleta.
     match /trips/{tripId} {
-      allow read: if isAdmin() || (isSignedIn() && resource.data.driverId == request.auth.uid);
+      // Turnos fechados ficam visíveis a qualquer condutor logado (handoff de
+      // KM: o próximo condutor precisa ler o turno fechado do anterior, que
+      // não é o dono do documento). Turnos abertos continuam privados.
+      allow read: if isAdmin()
+        || (isSignedIn() && resource.data.driverId == request.auth.uid)
+        || (isSignedIn() && resource.data.status == 'closed');
       allow create: if isSignedIn()
         && request.resource.data.driverId == request.auth.uid
         && request.resource.data.status == 'open';

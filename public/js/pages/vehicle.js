@@ -1,5 +1,5 @@
 import { requireAuth } from '/js/auth.js';
-import { getOpenTrip, updateTrip, createDamage, listDamagesByVehicle } from '/js/db.js';
+import { getOpenTrip, updateTrip, createDamage, listDamagesByVehicle, getLastClosedTrip } from '/js/db.js';
 import { uploadPhotos } from '/js/storage.js';
 import { renderBottomNav } from '/js/nav.js';
 import {
@@ -22,10 +22,18 @@ if (!trip) {
   document.getElementById('content').style.display = 'block';
   document.getElementById('vehicleTitle').textContent = trip.vehicleModel || 'Veículo';
   document.getElementById('vehiclePlateBadge').textContent = trip.vehiclePlate || '';
-  initTabs();
-  initFuel();
-  initKm();
-  await initDamages();
+
+  // Cada seção é isolada: um erro numa (ex.: avarias) nunca impede as outras
+  // (combustível, KM) de inicializar.
+  try { initTabs(); } catch (e) { console.error('initTabs falhou:', e); }
+  try { initFuel(); } catch (e) { console.error('initFuel falhou:', e); }
+  try { await initKm(); } catch (e) { console.error('initKm falhou:', e); }
+  try {
+    await initDamages();
+  } catch (e) {
+    console.error('initDamages falhou:', e);
+    showToast('Erro ao carregar avarias.', 'error');
+  }
 }
 
 /* ── Tabs ── */
@@ -86,48 +94,42 @@ function initFuel() {
 }
 
 /* ── KM ── */
+// KM final é registrado só no fechamento do turno (tela Resumo).
+// Aqui cuidamos só do KM inicial, com handoff do turno anterior.
 
-function updateKmSummary() {
-  const start = Number(document.getElementById('kmStart').value);
-  const end = Number(document.getElementById('kmEnd').value);
-  const summary = document.getElementById('kmSummary');
-  if (start && end && end >= start) {
-    summary.style.display = 'flex';
-    document.getElementById('kmDriven').textContent = (end - start).toLocaleString('pt-BR');
-  } else {
-    summary.style.display = 'none';
-  }
-}
-
-function initKm() {
+async function initKm() {
   const kmStartEl = document.getElementById('kmStart');
-  const kmEndEl = document.getElementById('kmEnd');
-  if (trip.kmStart != null) kmStartEl.value = trip.kmStart;
-  if (trip.kmEnd != null) kmEndEl.value = trip.kmEnd;
-  updateKmSummary();
+  const kmHintEl = document.getElementById('kmHandoffHint');
 
-  kmStartEl.addEventListener('input', updateKmSummary);
-  kmEndEl.addEventListener('input', updateKmSummary);
+  if (trip.kmStart != null) {
+    kmStartEl.value = trip.kmStart;
+  } else {
+    try {
+      const lastTrip = await getLastClosedTrip(trip.vehicleId);
+      if (lastTrip?.kmEnd != null) {
+        kmStartEl.value = lastTrip.kmEnd;
+        kmHintEl.textContent = `Último KM registrado (turno anterior): ${lastTrip.kmEnd.toLocaleString('pt-BR')} — confira com o painel.`;
+        kmHintEl.style.display = 'block';
+      }
+    } catch (e) {
+      console.error('Erro ao buscar KM do turno anterior:', e);
+    }
+  }
 
   document.getElementById('btnSaveKm').addEventListener('click', async () => {
     const kmStart = kmStartEl.value ? Number(kmStartEl.value) : null;
-    const kmEnd = kmEndEl.value ? Number(kmEndEl.value) : null;
 
     if (kmStart == null) {
       showToast('Informe o KM inicial.', 'error');
       return;
     }
-    if (kmEnd != null && kmEnd < kmStart) {
-      showToast('KM final não pode ser menor que o inicial.', 'error');
-      return;
-    }
 
     try {
-      await updateTrip(trip.id, { kmStart, kmEnd });
+      await updateTrip(trip.id, { kmStart });
       trip.kmStart = kmStart;
-      trip.kmEnd = kmEnd;
-      showToast('KM salvo.', 'success');
-    } catch {
+      showToast('KM inicial salvo.', 'success');
+    } catch (e) {
+      console.error('Erro ao salvar KM:', e);
       showToast('Erro ao salvar. Tente novamente.', 'error');
     }
   });
