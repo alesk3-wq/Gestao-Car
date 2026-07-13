@@ -1,0 +1,74 @@
+/* Despesas do turno */
+
+.total-card {
+  text-align: center;
+  padding: var(--pad-lg);
+  margin-top: var(--pad-sm);
+  background: linear-gradient(160deg, rgba(0, 212, 122, 0.10), var(--bg-surface) 60%);
+  border: 1px solid rgba(0, 212, 122, 0.25);
+}
+
+.total-card .total-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.total-card .total-value {
+  font-size: 40px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-top: 4px;
+}
+
+.expense-card { display: flex; align-items: center; gap: 12px; }
+
+.expense-card .expense-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-full);
+  background: var(--bg-elevated);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.expense-card .expense-info { flex: 1; min-width: 0; }
+
+.expense-card .expense-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.expense-card .expense-value {
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.expense-card .icon-btn {
+  width: 40px;
+  height: 40px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.receipt-thumb {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  border: 1px solid var(--border);
+}

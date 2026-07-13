@@ -1,0 +1,108 @@
+/* Tela do veículo (tabs avarias / combustível / km) */
+
+/* Diagrama do carro clicável */
+.car-diagram-wrap {
+  background: var(--bg-surface);
+  border-radius: var(--radius-md);
+  padding: var(--pad-md);
+  margin-bottom: var(--pad-md);
+}
+
+.car-diagram-wrap svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.car-diagram-wrap .zone {
+  fill: transparent;
+  stroke: var(--border-strong);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+  cursor: pointer;
+  transition: fill 0.15s;
+}
+
+.car-diagram-wrap .zone:active,
+.car-diagram-wrap .zone.selected {
+  fill: rgba(0, 212, 122, 0.35);
+  stroke: var(--accent);
+  stroke-dasharray: none;
+}
+
+.car-diagram-wrap .zone.has-damage {
+  fill: rgba(239, 68, 68, 0.30);
+  stroke: var(--danger);
+  stroke-dasharray: none;
+}
+
+.diagram-hint {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+
+/* Lista de avarias */
+.damage-card { display: flex; gap: 12px; }
+
+.damage-card .damage-thumb {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  background: var(--bg-elevated);
+  flex-shrink: 0;
+}
+
+.damage-card .damage-info { flex: 1; min-width: 0; }
+
+.damage-card .damage-desc {
+  font-size: 14px;
+  margin-top: 4px;
+  color: var(--text-secondary);
+}
+
+.damage-card .damage-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+/* Preview de fotos no formulário */
+.photo-previews {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.photo-previews img {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+
+.photo-input-btn input[type="file"] { display: none; }
+
+/* KM */
+.km-summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: var(--pad-md) 0;
+}
+
+.km-summary .km-value {
+  font-size: 34px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.km-summary .km-unit {
+  font-size: 15px;
+  color: var(--text-secondary);
+}

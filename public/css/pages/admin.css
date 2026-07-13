@@ -1,0 +1,92 @@
+/* Telas admin: veículos, condutores, histórico */
+
+.admin-nav {
+  display: flex;
+  gap: 8px;
+  margin-top: var(--pad-sm);
+  margin-bottom: var(--pad-md);
+  overflow-x: auto;
+}
+
+.admin-nav a {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.admin-nav a.active {
+  background: rgba(0, 212, 122, 0.12);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.list-card { display: flex; align-items: center; gap: 12px; }
+
+.list-card .list-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.list-card .list-info { flex: 1; min-width: 0; }
+
+.list-card .list-sub {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.list-card .icon-btn {
+  width: 44px;
+  height: 44px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Filtros do histórico */
+.filters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: var(--pad-md);
+}
+
+.filters .full { grid-column: 1 / -1; }
+
+/* Card de turno no histórico */
+.trip-card .trip-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.trip-card .trip-detail {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.trip-card .trip-detail strong {
+  display: block;
+  color: var(--text);
+  font-size: 15px;
+}

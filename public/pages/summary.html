@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Resumo - Frota App</title>
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Frota App">
+    <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+    <link rel="icon" type="image/png" href="/assets/icons/favicon.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="stylesheet" href="/css/design-system.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/pages/summary.css">
+</head>
+<body>
+    <header class="app-header">
+        <h1>Resumo do turno</h1>
+    </header>
+
+    <main class="page">
+        <div class="spinner" id="loading"></div>
+
+        <div id="noTripMsg" class="empty-state" style="display:none">
+            <p>Nenhum turno aberto.</p>
+            <p style="margin-top:8px"><a href="/pages/home.html">Iniciar um turno na Home</a></p>
+        </div>
+
+        <div id="content" style="display:none">
+            <div class="card">
+                <div class="card-row">
+                    <div>
+                        <h2 id="sumVehicle">—</h2>
+                        <p class="card-label" id="sumPlate"></p>
+                    </div>
+                    <span class="badge badge-accent" id="sumStatus">Aberto</span>
+                </div>
+                <hr class="card-divider">
+                <div class="card-row">
+                    <span class="card-label">Condutor</span>
+                    <span class="card-value" id="sumDriver">—</span>
+                </div>
+                <div class="card-row" style="margin-top:8px">
+                    <span class="card-label">Início</span>
+                    <span class="card-value" id="sumStart">—</span>
+                </div>
+            </div>
+
+            <div class="summary-grid">
+                <div class="summary-tile">
+                    <div class="tile-label">KM rodados</div>
+                    <div class="tile-value" id="sumKm">—</div>
+                    <div class="tile-sub" id="sumKmDetail"></div>
+                </div>
+                <div class="summary-tile">
+                    <div class="tile-label">Tempo de turno</div>
+                    <div class="tile-value" id="sumDuration">—</div>
+                </div>
+                <div class="summary-tile">
+                    <div class="tile-label">Combustível</div>
+                    <div class="tile-value" id="sumFuel">—</div>
+                    <div class="tile-sub">saída → retorno</div>
+                </div>
+                <div class="summary-tile">
+                    <div class="tile-label">Despesas</div>
+                    <div class="tile-value" id="sumExpenses">—</div>
+                    <div class="tile-sub" id="sumExpensesCount"></div>
+                </div>
+                <div class="summary-tile">
+                    <div class="tile-label">Paradas</div>
+                    <div class="tile-value" id="sumStops">—</div>
+                </div>
+                <div class="summary-tile">
+                    <div class="tile-label">Avarias novas</div>
+                    <div class="tile-value" id="sumDamages">—</div>
+                    <div class="tile-sub">neste turno</div>
+                </div>
+            </div>
+
+            <div class="fuel-warning" id="fuelWarning" style="display:none">
+                ⚠️ Combustível baixo no retorno — avise o próximo condutor / abasteça.
+            </div>
+
+            <div class="closed-banner" id="closedBanner" style="display:none">
+                ✓ Turno fechado. Bom descanso!
+            </div>
+
+            <div id="pendingList" class="section-gap"></div>
+
+            <button class="btn btn-warning sticky-cta" id="btnCloseTrip">Fechar Turno</button>
+        </div>
+    </main>
+
+    <!-- Confirmação de fechamento -->
+    <div class="sheet-backdrop" id="confirmBackdrop"></div>
+    <div class="sheet" id="confirmSheet">
+        <div class="sheet-handle"></div>
+        <h2>Fechar turno?</h2>
+        <p style="color:var(--text-secondary);margin-bottom:24px">
+            Depois de fechado, o turno não pode mais ser editado.
+        </p>
+        <button class="btn btn-warning" id="btnConfirmClose">Sim, fechar turno</button>
+        <button class="btn btn-secondary" id="btnCancelClose" style="margin-top:8px">Voltar</button>
+    </div>
+
+    <nav id="bottomNav" data-active="summary"></nav>
+
+    <script type="module" src="/js/pages/summary.js"></script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Paradas - Frota App</title>
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Frota App">
+    <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+    <link rel="icon" type="image/png" href="/assets/icons/favicon.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="stylesheet" href="/css/design-system.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/pages/stops.css">
+</head>
+<body>
+    <header class="app-header">
+        <h1>Paradas</h1>
+        <span class="badge badge-muted" id="stopCount"></span>
+    </header>
+
+    <main class="page">
+        <div class="spinner" id="loading"></div>
+
+        <div id="noTripMsg" class="empty-state" style="display:none">
+            <p>Nenhum turno aberto.</p>
+            <p style="margin-top:8px"><a href="/pages/home.html">Iniciar um turno na Home</a></p>
+        </div>
+
+        <div id="stopsList" style="display:none"></div>
+    </main>
+
+    <button class="fab" id="fabAddStop" aria-label="Nova parada" style="display:none">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+
+    <!-- Bottom-sheet: nova parada / editar -->
+    <div class="sheet-backdrop" id="stopBackdrop"></div>
+    <div class="sheet" id="stopSheet">
+        <div class="sheet-handle"></div>
+        <h2 id="stopSheetTitle">Nova parada</h2>
+
+        <div class="form-group">
+            <label for="stopType">Tipo</label>
+            <select id="stopType"></select>
+        </div>
+
+        <div class="form-group">
+            <label for="stopName">Nome do local</label>
+            <input type="text" id="stopName" placeholder="Ex: Shopping Bauru">
+        </div>
+
+        <div class="form-group">
+            <label>Horários</label>
+            <div class="time-row">
+                <div>
+                    <label for="stopArrival" style="font-size:12px">Chegada</label>
+                    <input type="time" id="stopArrival">
+                </div>
+                <div>
+                    <label for="stopDeparture" style="font-size:12px">Saída</label>
+                    <input type="time" id="stopDeparture">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="stopNotes">Observações</label>
+            <textarea id="stopNotes" placeholder="Ex: Buscar documento"></textarea>
+        </div>
+
+        <button class="btn btn-primary" id="btnSaveStop">Salvar parada</button>
+        <button class="btn btn-danger" id="btnDeleteStop" style="margin-top:8px;display:none">Remover parada</button>
+        <button class="btn btn-secondary" id="btnCancelStop" style="margin-top:8px">Cancelar</button>
+    </div>
+
+    <nav id="bottomNav" data-active="stops"></nav>
+
+    <script type="module" src="/js/pages/stops.js"></script>
+</body>
+</html>

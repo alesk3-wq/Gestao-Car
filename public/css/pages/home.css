@@ -1,0 +1,88 @@
+/* Home do condutor */
+
+.greeting { margin-top: var(--pad-sm); }
+
+.greeting h1 { font-size: 24px; }
+
+.greeting p {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin-top: 2px;
+}
+
+.vehicle-card {
+  margin-top: var(--pad-lg);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.vehicle-card .vehicle-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: rgba(0, 212, 122, 0.12);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.vehicle-card .vehicle-info { flex: 1; min-width: 0; }
+
+.vehicle-card .vehicle-plate {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+/* Card de turno em andamento */
+.trip-open-card {
+  margin-top: var(--pad-lg);
+  border: 1px solid rgba(0, 212, 122, 0.4);
+  background: linear-gradient(160deg, rgba(0, 212, 122, 0.08), var(--bg-surface) 55%);
+}
+
+.trip-open-card .trip-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.pulse-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 1.6s ease infinite;
+}
+
+@keyframes pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(0, 212, 122, 0.5); }
+  70%  { box-shadow: 0 0 0 10px rgba(0, 212, 122, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 212, 122, 0); }
+}
+
+.trip-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.trip-metric {
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  text-align: center;
+}
+
+.trip-metric .metric-value { font-size: 17px; font-weight: 700; }
+
+.trip-metric .metric-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}

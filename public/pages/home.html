@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Início - Frota App</title>
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Frota App">
+    <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+    <link rel="icon" type="image/png" href="/assets/icons/favicon.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="stylesheet" href="/css/design-system.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/pages/home.css">
+</head>
+<body>
+    <header class="app-header">
+        <h1>Frota App</h1>
+        <button class="header-action" id="btnLogout" aria-label="Sair">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+        </button>
+    </header>
+
+    <main class="page">
+        <div class="greeting">
+            <h1 id="greetingName">Olá!</h1>
+            <p id="greetingDate"></p>
+        </div>
+
+        <div class="spinner" id="loading"></div>
+
+        <!-- Sem turno aberto: escolha de veículo -->
+        <section id="noTripSection" style="display:none">
+            <div class="card vehicle-card">
+                <div class="vehicle-icon">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>
+                </div>
+                <div class="vehicle-info">
+                    <h3>Veículo do turno</h3>
+                    <div class="form-group" style="margin: 8px 0 0">
+                        <select id="vehicleSelect"></select>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn btn-primary sticky-cta" id="btnStartTrip">Iniciar Turno</button>
+        </section>
+
+        <!-- Turno aberto -->
+        <section id="openTripSection" style="display:none">
+            <div class="card trip-open-card">
+                <div class="trip-status">
+                    <span class="pulse-dot"></span>
+                    <span class="badge badge-accent">Turno em andamento</span>
+                </div>
+                <h2 id="tripVehicle">—</h2>
+                <p class="card-label" id="tripPlate"></p>
+                <div class="trip-metrics">
+                    <div class="trip-metric">
+                        <div class="metric-value" id="tripDuration">—</div>
+                        <div class="metric-label">Duração</div>
+                    </div>
+                    <div class="trip-metric">
+                        <div class="metric-value" id="tripStops">0</div>
+                        <div class="metric-label">Paradas</div>
+                    </div>
+                    <div class="trip-metric">
+                        <div class="metric-value" id="tripExpenses">R$ 0</div>
+                        <div class="metric-label">Despesas</div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn btn-primary sticky-cta" id="btnContinueTrip">Continuar Turno</button>
+        </section>
+    </main>
+
+    <nav id="bottomNav" data-active="home"></nav>
+
+    <script type="module" src="/js/pages/home.js"></script>
+</body>
+</html>

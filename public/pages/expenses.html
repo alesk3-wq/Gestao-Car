@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Despesas - Frota App</title>
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Frota App">
+    <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+    <link rel="icon" type="image/png" href="/assets/icons/favicon.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="stylesheet" href="/css/design-system.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/pages/expenses.css">
+</head>
+<body>
+    <header class="app-header">
+        <h1>Despesas</h1>
+    </header>
+
+    <main class="page">
+        <div class="spinner" id="loading"></div>
+
+        <div id="noTripMsg" class="empty-state" style="display:none">
+            <p>Nenhum turno aberto.</p>
+            <p style="margin-top:8px"><a href="/pages/home.html">Iniciar um turno na Home</a></p>
+        </div>
+
+        <div id="content" style="display:none">
+            <div class="card total-card">
+                <div class="total-label">Total do dia</div>
+                <div class="total-value" id="totalValue">R$ 0,00</div>
+            </div>
+
+            <div class="section-gap" id="expensesList"></div>
+        </div>
+    </main>
+
+    <button class="fab" id="fabAddExpense" aria-label="Nova despesa" style="display:none">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+
+    <!-- Bottom-sheet: nova despesa / editar -->
+    <div class="sheet-backdrop" id="expenseBackdrop"></div>
+    <div class="sheet" id="expenseSheet">
+        <div class="sheet-handle"></div>
+        <h2 id="expenseSheetTitle">Nova despesa</h2>
+
+        <div class="form-group">
+            <label for="expenseType">Tipo</label>
+            <select id="expenseType"></select>
+        </div>
+
+        <div class="form-group">
+            <label for="expenseValue">Valor (R$)</label>
+            <input type="text" id="expenseValue" inputmode="decimal" placeholder="0,00">
+        </div>
+
+        <div class="form-group">
+            <label for="expenseReceipt">Nº do recibo (opcional)</label>
+            <input type="text" id="expenseReceipt" inputmode="numeric" placeholder="Ex: 12345">
+        </div>
+
+        <div class="form-group">
+            <label for="expenseDesc">Descrição</label>
+            <input type="text" id="expenseDesc" placeholder="Ex: Almoço - restaurante X">
+        </div>
+
+        <div class="form-group photo-input-btn">
+            <button type="button" class="btn btn-secondary" id="btnAddReceiptPhoto">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                Anexar foto do recibo
+            </button>
+            <input type="file" id="receiptPhoto" accept="image/*" capture="environment" style="display:none">
+            <div class="photo-previews" id="receiptPreview"></div>
+        </div>
+
+        <button class="btn btn-primary" id="btnSaveExpense">Salvar despesa</button>
+        <button class="btn btn-danger" id="btnDeleteExpense" style="margin-top:8px;display:none">Remover despesa</button>
+        <button class="btn btn-secondary" id="btnCancelExpense" style="margin-top:8px">Cancelar</button>
+    </div>
+
+    <nav id="bottomNav" data-active="expenses"></nav>
+
+    <script type="module" src="/js/pages/expenses.js"></script>
+</body>
+</html>

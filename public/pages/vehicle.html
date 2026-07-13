@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Veículo - Frota App</title>
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Frota App">
+    <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+    <link rel="icon" type="image/png" href="/assets/icons/favicon.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="stylesheet" href="/css/design-system.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/pages/vehicle.css">
+</head>
+<body>
+    <header class="app-header">
+        <h1 id="vehicleTitle">Veículo</h1>
+        <span class="badge badge-accent" id="vehiclePlateBadge"></span>
+    </header>
+
+    <div class="tabs">
+        <button class="tab active" data-tab="damages">Avarias</button>
+        <button class="tab" data-tab="fuel">Combustível</button>
+        <button class="tab" data-tab="km">KM</button>
+    </div>
+
+    <main class="page">
+        <div class="spinner" id="loading"></div>
+
+        <div id="noTripMsg" class="empty-state" style="display:none">
+            <p>Nenhum turno aberto.</p>
+            <p style="margin-top:8px"><a href="/pages/home.html">Iniciar um turno na Home</a></p>
+        </div>
+
+        <div id="content" style="display:none">
+
+            <!-- ── Tab: Avarias ── -->
+            <section class="tab-panel active" id="panel-damages">
+                <div class="car-diagram-wrap">
+                    <div id="carDiagram"></div>
+                    <p class="diagram-hint">Toque no local do dano para registrar uma avaria</p>
+                </div>
+
+                <h2>Avarias registradas</h2>
+                <p class="form-hint" style="margin-bottom:12px">Confira o estado do veículo antes de sair. Avarias em vermelho no diagrama.</p>
+                <div id="damagesList"></div>
+            </section>
+
+            <!-- ── Tab: Combustível ── -->
+            <section class="tab-panel" id="panel-fuel">
+                <div class="card">
+                    <h3>Nível na saída</h3>
+                    <div class="fuel-slider">
+                        <div class="fuel-options" id="fuelStartOptions"></div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Nível no retorno</h3>
+                    <p class="form-hint">Preenchido no fechamento do turno</p>
+                    <div class="fuel-slider">
+                        <div class="fuel-options" id="fuelEndOptions"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── Tab: KM ── -->
+            <section class="tab-panel" id="panel-km">
+                <div class="card">
+                    <div class="form-group" style="margin-bottom:0">
+                        <label for="kmStart">KM inicial (painel na saída)</label>
+                        <input type="number" id="kmStart" inputmode="numeric" placeholder="Ex: 45230">
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="form-group" style="margin-bottom:0">
+                        <label for="kmEnd">KM final (painel no retorno)</label>
+                        <input type="number" id="kmEnd" inputmode="numeric" placeholder="Preenchido no retorno">
+                    </div>
+                </div>
+                <div class="km-summary" id="kmSummary" style="display:none">
+                    <span class="km-value" id="kmDriven">0</span>
+                    <span class="km-unit">km rodados</span>
+                </div>
+                <button class="btn btn-primary section-gap" id="btnSaveKm">Salvar KM</button>
+            </section>
+        </div>
+    </main>
+
+    <!-- Bottom-sheet: registrar avaria -->
+    <div class="sheet-backdrop" id="damageBackdrop"></div>
+    <div class="sheet" id="damageSheet">
+        <div class="sheet-handle"></div>
+        <h2>Registrar avaria</h2>
+
+        <div class="form-group">
+            <label>Local</label>
+            <input type="text" id="damageLocationLabel" readonly>
+        </div>
+
+        <div class="form-group">
+            <label for="damageDesc">Descrição</label>
+            <textarea id="damageDesc" placeholder="Ex: Arranhão de ~10cm na porta dianteira esquerda"></textarea>
+        </div>
+
+        <div class="form-group photo-input-btn">
+            <label>Fotos</label>
+            <button type="button" class="btn btn-secondary" id="btnAddPhoto">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                Tirar foto
+            </button>
+            <input type="file" id="damagePhotos" accept="image/*" capture="environment" multiple>
+            <div class="photo-previews" id="photoPreviews"></div>
+        </div>
+
+        <button class="btn btn-primary" id="btnSaveDamage">Registrar Avaria Nova</button>
+        <button class="btn btn-secondary" id="btnCancelDamage" style="margin-top:8px">Cancelar</button>
+    </div>
+
+    <nav id="bottomNav" data-active="vehicle"></nav>
+
+    <script type="module" src="/js/pages/vehicle.js"></script>
+</body>
+</html>

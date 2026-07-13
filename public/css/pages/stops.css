@@ -1,0 +1,53 @@
+/* Paradas do turno */
+
+.stop-card { display: flex; gap: 12px; }
+
+.stop-card .stop-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-full);
+  background: var(--bg-elevated);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.stop-card .stop-info { flex: 1; min-width: 0; }
+
+.stop-card .stop-times {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.stop-card .stop-notes {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+.stop-card .stop-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stop-card .icon-btn {
+  width: 40px;
+  height: 40px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+}
+
+.time-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Histórico - Frota App</title>
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Frota App">
+    <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+    <link rel="icon" type="image/png" href="/assets/icons/favicon.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="stylesheet" href="/css/design-system.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/pages/admin.css">
+    <link rel="stylesheet" href="/css/pages/vehicle.css">
+</head>
+<body>
+    <header class="app-header">
+        <h1>Histórico</h1>
+        <button class="header-action" id="btnLogout" aria-label="Sair">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+    </header>
+
+    <main class="page" style="padding-bottom: 32px">
+        <nav class="admin-nav">
+            <a href="/pages/admin/history.html" class="active">Histórico</a>
+            <a href="/pages/admin/vehicles.html">Veículos</a>
+            <a href="/pages/admin/drivers.html">Condutores</a>
+        </nav>
+
+        <div class="filters">
+            <select id="filterVehicle" class="full"><option value="">Todos os veículos</option></select>
+            <select id="filterDriver" class="full"><option value="">Todos os condutores</option></select>
+            <input type="date" id="filterFrom" aria-label="De">
+            <input type="date" id="filterTo" aria-label="Até">
+            <button class="btn btn-primary btn-sm full" id="btnFilter" style="width:100%">Filtrar</button>
+        </div>
+
+        <div class="spinner" id="loading"></div>
+
+        <!-- Timeline de avarias (aparece quando um veículo é filtrado) -->
+        <section id="damagesSection" style="display:none">
+            <h2 style="margin-bottom:12px">Avarias do veículo</h2>
+            <div id="damagesList"></div>
+            <hr class="card-divider" style="margin:24px 0">
+        </section>
+
+        <h2 style="margin-bottom:12px">Turnos</h2>
+        <div id="tripsList"></div>
+    </main>
+
+    <script type="module" src="/js/pages/admin/history.js"></script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+/* ============================================
+   DESIGN SYSTEM — FROTA APP
+   Tokens + reset base. Referência: CLAUDE.md §4
+   ============================================ */
+
+:root {
+  /* Backgrounds */
+  --bg:              #0a0a0a;   /* fundo principal (quase preto) */
+  --bg-surface:      #1a1a1a;   /* cards e inputs */
+  --bg-elevated:     #242424;   /* modais, bottom-sheets, tabs ativas */
+
+  /* Bordas */
+  --border:          #2a2a2a;
+  --border-strong:   #3a3a3a;
+
+  /* Texto */
+  --text:            #ffffff;
+  --text-secondary:  #a0a0a0;
+  --text-muted:      #6a6a6a;
+
+  /* Cor de destaque (CTA principal) */
+  --accent:          #00d47a;
+  --accent-hover:    #00b869;
+  --on-accent:       #000000;
+
+  /* Semânticos */
+  --danger:          #ef4444;
+  --warning:         #f59e0b;
+  --success:         #22c55e;
+
+  /* Tipografia */
+  --font-sans:       -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Espaçamento */
+  --pad-sm: 0.5rem;
+  --pad-md: 1rem;
+  --pad-lg: 1.5rem;
+  --pad-xl: 2rem;
+
+  /* Border radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-full: 999px;
+
+  /* Layout */
+  --header-height: 56px;
+  --bottomnav-height: 64px;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  min-height: 100vh;
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1 { font-size: 26px; font-weight: 700; }
+h2 { font-size: 19px; font-weight: 600; }
+h3 { font-size: 16px; font-weight: 600; }
+
+a { color: var(--accent); text-decoration: none; }
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+img { max-width: 100%; }
+
+::selection { background: rgba(0, 212, 122, 0.3); }

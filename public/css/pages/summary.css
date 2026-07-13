@@ -1,0 +1,61 @@
+/* Resumo / fechamento do turno */
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: var(--pad-md);
+}
+
+.summary-tile {
+  background: var(--bg-surface);
+  border-radius: var(--radius-md);
+  padding: var(--pad-md);
+}
+
+.summary-tile .tile-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.summary-tile .tile-value {
+  font-size: 22px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.summary-tile .tile-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.summary-tile.warn .tile-value { color: var(--warning); }
+
+.closed-banner {
+  margin-top: var(--pad-md);
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: rgba(34, 197, 94, 0.10);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  color: var(--success);
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fuel-warning {
+  margin-top: var(--pad-md);
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: rgba(245, 158, 11, 0.10);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: var(--warning);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Frota App</title>
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Frota App">
+    <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+    <link rel="icon" type="image/png" href="/assets/icons/favicon.png">
+    <link rel="manifest" href="/manifest.json">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: #0a0a0a;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .logo-wrapper { position: relative; width: 140px; height: 140px; }
+        .logo-wrapper img {
+            width: 140px; height: 140px;
+            border-radius: 28px;
+            position: relative;
+            z-index: 1;
+        }
+        .spinner {
+            position: absolute;
+            inset: -14px;
+            border-radius: 50%;
+            border: 3px solid rgba(0, 212, 122, 0.12);
+            border-top-color: #00d47a;
+            animation: spin 1.1s linear infinite;
+            filter: drop-shadow(0 0 6px rgba(0, 212, 122, 0.55));
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="logo-wrapper">
+        <img src="/assets/icons/icon-192.png" alt="Frota App">
+        <div class="spinner"></div>
+    </div>
+
+    <script type="module">
+        import { auth } from '/js/firebase-config.js';
+        import { getDriverProfile, homeForRole } from '/js/auth.js';
+        import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/service-worker.js');
+        }
+
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+                          || window.navigator.standalone === true;
+
+        if (!isStandalone) {
+            window.location.replace('/instalar.html');
+        } else {
+            onAuthStateChanged(auth, async (user) => {
+                if (!user) {
+                    window.location.replace('/login.html');
+                    return;
+                }
+                try {
+                    const driver = await getDriverProfile(user.uid);
+                    window.location.replace(homeForRole(driver?.role));
+                } catch {
+                    window.location.replace('/login.html');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

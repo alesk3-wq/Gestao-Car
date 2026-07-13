@@ -1,0 +1,59 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && get(/databases/$(database)/documents/drivers/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isSelf(driverId) {
+      return isSignedIn() && request.auth.uid == driverId;
+    }
+
+    // Condutores: cada um lê/edita o próprio perfil; admin gerencia todos.
+    // Qualquer usuário logado pode ler a lista (nomes aparecem em turnos/histórico)
+    // e criar o próprio doc no cadastro (sempre como role "driver").
+    match /drivers/{driverId} {
+      allow read: if isSignedIn();
+      allow create: if isSelf(driverId)
+        && request.resource.data.role == 'driver';
+      allow update: if isAdmin()
+        || (isSelf(driverId) && request.resource.data.role == resource.data.role);
+      allow delete: if isAdmin();
+    }
+
+    // Veículos: condutor só lê; admin gerencia.
+    match /vehicles/{vehicleId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Turnos: condutor cria/edita os próprios enquanto abertos.
+    // Turno fechado é imutável (auditoria) — nem admin edita/deleta.
+    match /trips/{tripId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.driverId == request.auth.uid);
+      allow create: if isSignedIn()
+        && request.resource.data.driverId == request.auth.uid
+        && request.resource.data.status == 'open';
+      allow update: if isSignedIn()
+        && resource.data.driverId == request.auth.uid
+        && resource.data.status == 'open';
+      allow delete: if false;
+    }
+
+    // Avarias: condutor registra e lê; só admin resolve/edita depois.
+    // Leitura liberada pra logados (handoff: condutor precisa ver avarias anteriores do veículo).
+    match /damages/{damageId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.driverId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+  }
+}

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Veículos - Frota App</title>
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Frota App">
+    <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+    <link rel="icon" type="image/png" href="/assets/icons/favicon.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="stylesheet" href="/css/design-system.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/pages/admin.css">
+</head>
+<body>
+    <header class="app-header">
+        <h1>Gestão da frota</h1>
+        <button class="header-action" id="btnLogout" aria-label="Sair">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+    </header>
+
+    <main class="page" style="padding-bottom: 120px">
+        <nav class="admin-nav">
+            <a href="/pages/admin/history.html">Histórico</a>
+            <a href="/pages/admin/vehicles.html" class="active">Veículos</a>
+            <a href="/pages/admin/drivers.html">Condutores</a>
+        </nav>
+
+        <div class="spinner" id="loading"></div>
+        <div id="vehiclesList"></div>
+    </main>
+
+    <button class="fab" id="fabAddVehicle" aria-label="Novo veículo" style="bottom: 24px">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+
+    <!-- Bottom-sheet: veículo -->
+    <div class="sheet-backdrop" id="vehicleBackdrop"></div>
+    <div class="sheet" id="vehicleSheet">
+        <div class="sheet-handle"></div>
+        <h2 id="vehicleSheetTitle">Novo veículo</h2>
+
+        <div class="form-group">
+            <label for="vehModel">Modelo</label>
+            <input type="text" id="vehModel" placeholder="Ex: Toyota Corolla">
+        </div>
+
+        <div class="form-group">
+            <label for="vehPlate">Placa</label>
+            <input type="text" id="vehPlate" placeholder="Ex: ABC-1D23" style="text-transform:uppercase">
+        </div>
+
+        <div class="form-group">
+            <label for="vehFleet">Nº da frota</label>
+            <input type="text" id="vehFleet" placeholder="Ex: FROTA-01">
+        </div>
+
+        <div class="form-group" id="activeGroup" style="display:none">
+            <label for="vehActive">Situação</label>
+            <select id="vehActive">
+                <option value="true">Ativo</option>
+                <option value="false">Inativo</option>
+            </select>
+        </div>
+
+        <button class="btn btn-primary" id="btnSaveVehicle">Salvar veículo</button>
+        <button class="btn btn-secondary" id="btnCancelVehicle" style="margin-top:8px">Cancelar</button>
+    </div>
+
+    <script type="module" src="/js/pages/admin/vehicles.js"></script>
+</body>
+</html>
