@@ -1,6 +1,6 @@
 {
   "name": "SegAut App",
-  "short_name": "Frota App",
+  "short_name": "SegAut-App",
   "description": "Checklist e controle de uso dos veículos da frota",
   "start_url": "/",
   "display": "standalone",

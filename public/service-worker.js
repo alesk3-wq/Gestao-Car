@@ -1,7 +1,10 @@
 // Service worker — cache offline básico do app shell.
-// Estratégia: cache-first pra assets estáticos, network-first pra HTML.
+// Estratégia: stale-while-revalidate pra assets estáticos (serve do cache na
+// hora, mas atualiza em segundo plano — assim um deploy novo se propaga
+// sozinho no próximo carregamento, sem precisar limpar cache manualmente),
+// network-first pra HTML.
 
-const CACHE_NAME = 'frota-app-v1';
+const CACHE_NAME = 'frota-app-v2';
 
 const PRECACHE = [
   '/',
@@ -52,17 +55,21 @@ self.addEventListener('fetch', (event) => {
         .catch(() => caches.match(event.request))
     );
   } else {
-    // cache-first: css/js/imagens
+    // stale-while-revalidate: css/js/imagens. Responde na hora com o cache
+    // (se existir), mas sempre busca uma versão fresca em paralelo e
+    // atualiza o cache pro próximo carregamento — nunca fica travado
+    // servindo uma versão antiga indefinidamente.
     event.respondWith(
-      caches.match(event.request).then(
-        (cached) =>
-          cached ||
-          fetch(event.request).then((res) => {
-            const copy = res.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+      caches.open(CACHE_NAME).then(async (cache) => {
+        const cached = await cache.match(event.request);
+        const fresh = fetch(event.request)
+          .then((res) => {
+            cache.put(event.request, res.clone());
             return res;
           })
-      )
+          .catch(() => cached);
+        return cached || fresh;
+      })
     );
   }
 });

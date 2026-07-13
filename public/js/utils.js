@@ -25,7 +25,11 @@ export const DAMAGE_LOCATIONS = {
   'front-left':   'Lateral diant. esquerda',
   'rear-left':    'Lateral tras. esquerda',
   'front-right':  'Lateral diant. direita',
-  'rear-right':   'Lateral tras. direita'
+  'rear-right':   'Lateral tras. direita',
+  'wheel-front-left':  'Roda diant. esquerda',
+  'wheel-front-right': 'Roda diant. direita',
+  'wheel-rear-left':   'Roda tras. esquerda',
+  'wheel-rear-right':  'Roda tras. direita'
 };
 
 export function uuid() {
