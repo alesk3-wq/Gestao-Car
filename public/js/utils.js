@@ -14,6 +14,14 @@ export const STOP_TYPES = ['escritório', 'fábrica', 'loja', 'shopping', 'resta
 
 export const EXPENSE_TYPES = ['refeição', 'água/lanche', 'pedágio', 'combustível', 'outro'];
 
+export const EXPENSE_TYPE_ICONS = {
+  'refeição': '🍽️',
+  'água/lanche': '🥤',
+  'pedágio': '🛣️',
+  'combustível': '⛽',
+  'outro': '📌'
+};
+
 export const DAMAGE_LOCATIONS = {
   'front':        'Frente',
   'hood':         'Capô',
@@ -126,4 +134,66 @@ export function registerServiceWorker() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/service-worker.js');
   }
+}
+
+// Tabs genéricas (usadas na tela Veículo e no painel Admin).
+// Espera botões com [data-tab="x"] e painéis correspondentes com id="panel-x".
+export function initTabs(scope = document) {
+  const tabs = scope.querySelectorAll('.tab');
+  tabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      tabs.forEach((t) => t.classList.remove('active'));
+      scope.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById(`panel-${tab.dataset.tab}`).classList.add('active');
+    });
+  });
+}
+
+/* ── Lightbox de fotos (avarias, recibos) ── */
+
+let lightboxEl = null;
+let lightboxPhotos = [];
+let lightboxIndex = 0;
+
+function ensureLightbox() {
+  if (lightboxEl) return lightboxEl;
+  lightboxEl = document.createElement('div');
+  lightboxEl.className = 'lightbox-backdrop';
+  lightboxEl.innerHTML = `
+    <button class="lightbox-close" aria-label="Fechar">✕</button>
+    <button class="lightbox-prev" aria-label="Foto anterior">‹</button>
+    <img class="lightbox-img" alt="Foto ampliada">
+    <button class="lightbox-next" aria-label="Próxima foto">›</button>
+    <div class="lightbox-counter"></div>
+  `;
+  document.body.appendChild(lightboxEl);
+  lightboxEl.querySelector('.lightbox-close').addEventListener('click', closeLightbox);
+  lightboxEl.addEventListener('click', (e) => { if (e.target === lightboxEl) closeLightbox(); });
+  lightboxEl.querySelector('.lightbox-prev').addEventListener('click', () => showLightboxPhoto(lightboxIndex - 1));
+  lightboxEl.querySelector('.lightbox-next').addEventListener('click', () => showLightboxPhoto(lightboxIndex + 1));
+  return lightboxEl;
+}
+
+function showLightboxPhoto(i) {
+  lightboxIndex = (i + lightboxPhotos.length) % lightboxPhotos.length;
+  lightboxEl.querySelector('.lightbox-img').src = lightboxPhotos[lightboxIndex];
+  const multi = lightboxPhotos.length > 1;
+  lightboxEl.querySelector('.lightbox-prev').style.display = multi ? 'flex' : 'none';
+  lightboxEl.querySelector('.lightbox-next').style.display = multi ? 'flex' : 'none';
+  lightboxEl.querySelector('.lightbox-counter').textContent = multi ? `${lightboxIndex + 1}/${lightboxPhotos.length}` : '';
+}
+
+function closeLightbox() {
+  lightboxEl?.classList.remove('open');
+}
+
+// photos: uma URL ou array de URLs. Chame a partir de qualquer thumbnail clicável.
+export function openLightbox(photos, startIndex = 0) {
+  const urls = (Array.isArray(photos) ? photos : [photos]).filter(Boolean);
+  if (!urls.length) return;
+  lightboxPhotos = urls;
+  ensureLightbox();
+  showLightboxPhoto(startIndex);
+  lightboxEl.classList.add('open');
 }

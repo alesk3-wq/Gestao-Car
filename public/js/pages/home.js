@@ -22,6 +22,10 @@ document.getElementById('btnLogout').addEventListener('click', logout);
 
 const { driver } = await requireAuth();
 
+if (driver.role === 'admin') {
+  document.getElementById('linkAdminPanel').style.display = 'flex';
+}
+
 document.getElementById('greetingName').textContent = `Olá, ${driver.name.split(' ')[0]}!`;
 document.getElementById('greetingDate').textContent = new Date().toLocaleDateString('pt-BR', {
   weekday: 'long', day: 'numeric', month: 'long'

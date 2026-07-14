@@ -136,6 +136,13 @@ export async function listDamagesByVehicle(vehicleId, { max = 50 } = {}) {
     .slice(0, max);
 }
 
+// Contagem de avarias em aberto na frota toda (visão do painel admin sem
+// filtro de veículo). Filtro de igualdade único, sem índice composto.
+export async function countOpenDamages() {
+  const snap = await getDocs(query(collection(db, 'damages'), where('resolved', '==', false)));
+  return snap.size;
+}
+
 export async function listDamagesByTrip(tripId) {
   const snap = await getDocs(query(
     collection(db, 'damages'),

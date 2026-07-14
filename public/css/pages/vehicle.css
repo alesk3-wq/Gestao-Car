@@ -46,6 +46,13 @@
 /* Lista de avarias */
 .damage-card { display: flex; gap: 12px; }
 
+.damage-thumbs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
 .damage-card .damage-thumb {
   width: 64px;
   height: 64px;
@@ -53,6 +60,7 @@
   object-fit: cover;
   background: var(--bg-elevated);
   flex-shrink: 0;
+  cursor: pointer;
 }
 
 .damage-card .damage-info { flex: 1; min-width: 0; }

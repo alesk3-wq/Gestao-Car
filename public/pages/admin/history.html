@@ -15,10 +15,15 @@
     <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/css/pages/admin.css">
     <link rel="stylesheet" href="/css/pages/vehicle.css">
+    <link rel="stylesheet" href="/css/pages/summary.css">
+    <link rel="stylesheet" href="/css/pages/expenses.css">
 </head>
 <body>
     <header class="app-header">
         <h1>Histórico</h1>
+        <a class="header-action" href="/pages/home.html" aria-label="Modo condutor">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>
+        </a>
         <button class="header-action" id="btnLogout" aria-label="Sair">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         </button>
@@ -41,15 +46,51 @@
 
         <div class="spinner" id="loading"></div>
 
+        <!-- Visão geral do conjunto filtrado -->
+        <div class="summary-grid" id="statsGrid">
+            <div class="summary-tile">
+                <div class="tile-label">Turnos</div>
+                <div class="tile-value" id="statTrips">—</div>
+            </div>
+            <div class="summary-tile">
+                <div class="tile-label">KM total</div>
+                <div class="tile-value" id="statKm">—</div>
+            </div>
+            <div class="summary-tile">
+                <div class="tile-label">Despesas totais</div>
+                <div class="tile-value" id="statExpenses">—</div>
+            </div>
+            <div class="summary-tile">
+                <div class="tile-label">Avarias em aberto</div>
+                <div class="tile-value" id="statDamages">—</div>
+            </div>
+        </div>
+
         <!-- Timeline de avarias (aparece quando um veículo é filtrado) -->
-        <section id="damagesSection" style="display:none">
+        <section id="damagesSection" class="section-gap" style="display:none">
             <h2 style="margin-bottom:12px">Avarias do veículo</h2>
             <div id="damagesList"></div>
-            <hr class="card-divider" style="margin:24px 0">
         </section>
 
-        <h2 style="margin-bottom:12px">Turnos</h2>
-        <div id="tripsList"></div>
+        <div class="tabs section-gap">
+            <button class="tab active" data-tab="turnos">Turnos</button>
+            <button class="tab" data-tab="despesas">Despesas</button>
+        </div>
+
+        <div class="tab-panel active" id="panel-turnos">
+            <div id="tripsList" style="margin-top:12px"></div>
+        </div>
+
+        <div class="tab-panel" id="panel-despesas">
+            <div class="form-group" style="margin-top:12px">
+                <select id="filterExpenseType"></select>
+            </div>
+            <div class="card total-card">
+                <div class="total-label">Total no período</div>
+                <div class="total-value" id="expensesTotalValue">R$ 0,00</div>
+            </div>
+            <div id="expensesList" class="section-gap"></div>
+        </div>
     </main>
 
     <script type="module" src="/js/pages/admin/history.js"></script>

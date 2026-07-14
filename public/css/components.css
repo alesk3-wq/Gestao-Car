@@ -357,6 +357,69 @@ select {
 .toast.toast-success { border-color: rgba(34, 197, 94, 0.4); color: var(--success); }
 .toast.toast-error   { border-color: rgba(239, 68, 68, 0.4); color: var(--danger); }
 
+/* ── Lightbox (zoom de fotos: avarias, recibos) ── */
+.lightbox-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: rgba(0, 0, 0, 0.92);
+  align-items: center;
+  justify-content: center;
+}
+.lightbox-backdrop.open { display: flex; }
+
+.lightbox-img {
+  max-width: 92vw;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+}
+
+.lightbox-close {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 16px);
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: #ffffff;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lightbox-prev, .lightbox-next {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: #ffffff;
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.lightbox-prev { left: 12px; }
+.lightbox-next { right: 12px; }
+
+.lightbox-counter {
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom) + 24px);
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+}
+
 /* ── Estados vazios / loading ── */
 .empty-state {
   text-align: center;

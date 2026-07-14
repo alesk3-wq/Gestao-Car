@@ -71,4 +71,5 @@
   border-radius: var(--radius-sm);
   object-fit: cover;
   border: 1px solid var(--border);
+  cursor: pointer;
 }

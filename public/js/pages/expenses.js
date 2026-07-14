@@ -3,17 +3,9 @@ import { getOpenTrip, updateTrip } from '/js/db.js';
 import { uploadPhoto } from '/js/storage.js';
 import { renderBottomNav } from '/js/nav.js';
 import {
-  EXPENSE_TYPES, uuid, escapeHtml, formatCurrency, parseCurrency,
-  showToast, registerServiceWorker
+  EXPENSE_TYPES, EXPENSE_TYPE_ICONS, uuid, escapeHtml, formatCurrency, parseCurrency,
+  showToast, registerServiceWorker, openLightbox
 } from '/js/utils.js';
-
-const TYPE_ICONS = {
-  'refeição': '🍽️',
-  'água/lanche': '🥤',
-  'pedágio': '🛣️',
-  'combustível': '⛽',
-  'outro': '📌'
-};
 
 registerServiceWorker();
 renderBottomNav();
@@ -77,7 +69,7 @@ function renderList() {
 
   list.innerHTML = expenses.map((e) => `
     <div class="card expense-card" data-id="${e.id}">
-      <div class="expense-icon">${TYPE_ICONS[e.type] || '📌'}</div>
+      <div class="expense-icon">${EXPENSE_TYPE_ICONS[e.type] || '📌'}</div>
       <div class="expense-info">
         <div class="card-row">
           <strong>${e.type[0].toUpperCase() + e.type.slice(1)}</strong>
@@ -94,6 +86,8 @@ function renderList() {
 
   list.querySelectorAll('.expense-card').forEach((card) => {
     card.querySelector('.icon-btn').addEventListener('click', () => openSheet(card.dataset.id));
+    const thumb = card.querySelector('.receipt-thumb');
+    if (thumb) thumb.addEventListener('click', () => openLightbox(thumb.src));
   });
 }
 

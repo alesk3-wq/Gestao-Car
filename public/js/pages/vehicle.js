@@ -4,25 +4,11 @@ import { uploadPhotos } from '/js/storage.js';
 import { renderBottomNav } from '/js/nav.js';
 import {
   FUEL_LEVELS, FUEL_LABELS, DAMAGE_LOCATIONS,
-  escapeHtml, formatDateTime, showToast, registerServiceWorker
+  escapeHtml, formatDateTime, showToast, registerServiceWorker, initTabs, openLightbox
 } from '/js/utils.js';
 
 registerServiceWorker();
 renderBottomNav();
-
-/* ── Tabs ── */
-
-function initTabs() {
-  const tabs = document.querySelectorAll('.tab');
-  tabs.forEach((tab) => {
-    tab.addEventListener('click', () => {
-      tabs.forEach((t) => t.classList.remove('active'));
-      document.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
-      tab.classList.add('active');
-      document.getElementById(`panel-${tab.dataset.tab}`).classList.add('active');
-    });
-  });
-}
 
 /* ── Combustível ── */
 
@@ -163,9 +149,14 @@ function renderDamagesList(trip) {
     return;
   }
 
-  list.innerHTML = open.slice(0, 10).map((d) => `
+  const shown = open.slice(0, 10);
+
+  list.innerHTML = shown.map((d) => `
     <div class="card damage-card">
-      ${d.photoUrls?.[0] ? `<img class="damage-thumb" src="${escapeHtml(d.photoUrls[0])}" alt="Foto da avaria">` : ''}
+      ${(d.photoUrls || []).length ? `
+        <div class="damage-thumbs">
+          ${d.photoUrls.map((url, i) => `<img class="damage-thumb" src="${escapeHtml(url)}" alt="Foto da avaria ${i + 1}">`).join('')}
+        </div>` : ''}
       <div class="damage-info">
         <div class="card-row">
           <strong>${escapeHtml(DAMAGE_LOCATIONS[d.location] || d.location)}</strong>
@@ -178,6 +169,12 @@ function renderDamagesList(trip) {
       </div>
     </div>
   `).join('');
+
+  list.querySelectorAll('.damage-card').forEach((card, i) => {
+    card.querySelectorAll('.damage-thumb').forEach((img, photoIdx) => {
+      img.addEventListener('click', () => openLightbox(shown[i].photoUrls, photoIdx));
+    });
+  });
 }
 
 function initDamageSheet(trip, driver) {
