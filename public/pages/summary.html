@@ -42,13 +42,29 @@
                     <span class="card-label">Condutor</span>
                     <span class="card-value" id="sumDriver">—</span>
                 </div>
-                <div class="card-row" style="margin-top:8px">
+                <div class="card-row" style="margin-top:8px" id="sumStartRow">
                     <span class="card-label">Início</span>
                     <span class="card-value" id="sumStart">—</span>
                 </div>
                 <div class="card-row" style="margin-top:8px" id="sumSecondDriverRow" hidden>
                     <span class="card-label">Copiloto</span>
                     <span class="card-value" id="sumSecondDriver">—</span>
+                </div>
+            </div>
+
+            <!-- Ajuste de horários (só com turno aberto) -->
+            <div class="card" id="timeEditCard" hidden>
+                <h3>Horários do turno</h3>
+                <p class="form-hint" style="margin:4px 0 12px">
+                    Ajuste se não deu pra abrir/fechar o turno na hora certa.
+                </p>
+                <div class="form-group">
+                    <label for="sumStartInput">Início do turno</label>
+                    <input type="datetime-local" id="sumStartInput">
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                    <label for="sumEndInput">Fim do turno</label>
+                    <input type="datetime-local" id="sumEndInput">
                 </div>
             </div>
 
@@ -102,6 +118,12 @@
     <div class="sheet" id="confirmSheet">
         <div class="sheet-handle"></div>
         <h2>Fechar turno?</h2>
+        <p style="margin-bottom:8px">
+            Fechando o turno com <strong id="confirmVehicle">—</strong>.
+        </p>
+        <p style="margin-bottom:16px">
+            <a href="/pages/vehicle.html">Veículo errado? Trocar</a>
+        </p>
         <p style="color:var(--text-secondary);margin-bottom:24px">
             Depois de fechado, o turno não pode mais ser editado.
         </p>

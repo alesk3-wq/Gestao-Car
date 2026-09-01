@@ -3,7 +3,7 @@
 
 import { storage } from './firebase-config.js';
 import {
-  ref, uploadBytes, getDownloadURL
+  ref, uploadBytes, getDownloadURL, deleteObject
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
 
 // Pega coords atuais (ou null se negado/indisponível) — não bloqueia o upload
@@ -74,4 +74,14 @@ export async function uploadPhotos(files, vehicleId, tripId) {
     urls.push(await uploadPhoto(file, vehicleId, tripId));
   }
   return urls;
+}
+
+// Apaga uma foto pela download URL (limpeza de dados de teste). Ignora se já
+// não existir — não precisa travar a limpeza por causa disso.
+export async function deletePhoto(url) {
+  try {
+    await deleteObject(ref(storage, url));
+  } catch (e) {
+    if (e?.code !== 'storage/object-not-found') console.error('Erro ao apagar foto:', e);
+  }
 }

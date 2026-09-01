@@ -55,7 +55,9 @@ projeto/
     │   └── admin/
     │       ├── vehicles.html         # Cadastro de veículos
     │       ├── drivers.html          # Cadastro de condutores
-    │       └── history.html          # Histórico geral (visão gestor)
+    │       ├── history.html          # Histórico: lista de cards-resumo + totais do filtro
+    │       ├── trip.html             # Relatório completo de um turno (?id=) + Exportar PDF (print)
+    │       └── dev.html              # Manutenção: semear/apagar turnos de teste (só superadmin)
     ├── css/
     │   ├── design-system.css         # Variáveis CSS (cores, tipografia, spacing) — ver seção 5
     │   ├── components.css            # Botões, cards, inputs, modais, bottom-nav, tabs
@@ -66,7 +68,8 @@ projeto/
     │       ├── stops.css
     │       ├── expenses.css
     │       ├── summary.css
-    │       └── admin.css
+    │       ├── admin.css
+    │       └── report.css            # Relatório do turno: tema normal + @media print (PDF)
     ├── js/
     │   ├── firebase-config.js        # Inicialização do Firebase (config pública)
     │   ├── auth.js                   # Login, register, logout, guard de rota
@@ -85,7 +88,9 @@ projeto/
     │       └── admin/
     │           ├── vehicles.js
     │           ├── drivers.js
-    │           └── history.js
+    │           ├── history.js
+    │           ├── trip.js           # Relatório de um turno + window.print()
+    │           └── dev.js            # Semear/apagar turnos de teste (guard por e-mail)
     └── assets/
         ├── icons/                    # Ícones PWA (192px, 512px) e favicon
         └── images/
@@ -244,10 +249,10 @@ Referência estética: apps tipo Uber Driver / iFood Entregador — fundo preto,
   secondDriverId: "drv_456" | null,   // segundo condutor/copiloto — só registro, não loga nem opera o app
   secondDriverName: "Maria Souza" | null,
   vehicleId: "veh_456",
-  vehiclePlate: "ABC-1D23",           // desnormalizado
+  vehiclePlate: "ABC-1D23",           // desnormalizado (+ vehicleModel). Trocável na tela Veículo enquanto o turno está aberto — a troca zera kmStart/kmEnd/fuelStart
   date: "2026-07-10",
-  startTime: timestamp,
-  endTime: timestamp | null,          // null enquanto turno aberto
+  startTime: timestamp,               // editável pelo condutor enquanto o turno está aberto (Home / Resumo)
+  endTime: timestamp | null,          // null enquanto aberto; definido no fechamento a partir do input do Resumo (não é serverTimestamp)
   kmStart: 45230,
   kmEnd: 45412 | null,
   fuelStart: "1/2",                   // "vazio" | "1/4" | "1/2" | "3/4" | "cheio"
@@ -270,12 +275,14 @@ Referência estética: apps tipo Uber Driver / iFood Entregador — fundo preto,
       value: 45.50,
       receiptNumber: "12345",
       description: "Almoço - restaurante X",
+      at: timestamp,                     // data/hora da despesa — editável (o condutor lança depois); ausente em registros antigos
       receiptPhotoUrl: "storage://..." | null
     }
   ],
   totalExpenses: 145.30,               // calculado
-  createdAt: timestamp,
-  closedAt: timestamp | null
+  isTest: true | undefined,            // turno de teste (semeado ou marcado na tela dev / checkbox da Home do superadmin) — só ele pode criar/editar/apagar com isTest
+  createdAt: timestamp,                // carimbo real de criação (auditoria) — não confundir com startTime
+  closedAt: timestamp | null           // carimbo real do fechamento (auditoria) — não confundir com endTime
 }
 ```
 
@@ -338,11 +345,14 @@ Fluxo:
 - Card do veículo atribuído (se houver `defaultVehicleId`) ou dropdown pra escolher
 - Card opcional **"Segundo condutor / copiloto"**: dropdown com os demais condutores ativos (`listDrivers()`, excluindo o próprio). Puro registro — grava `secondDriverId`/`secondDriverName` no `trip`, o copiloto não loga nem interage com o app. Relevante pra plantões longos (>24h) onde há dois condutores no mesmo turno.
 - Botão grande **"Iniciar Turno"** (cria `trip` com `status: "open"`) — sticky no bottom, acima do nav
-- Se já houver turno aberto: card grande do turno em andamento + botão **"Continuar Turno"**
+- Se já houver turno aberto: card grande do turno em andamento + botão **"Continuar Turno"**. O card tem um campo **"Início do turno"** (`datetime-local`) editável — salva na hora (`updateTrip`) e recalcula a Duração. Pro caso comum do condutor abrir o app atrasado e precisar recuar o horário. Não aceita horário no futuro.
+- Checkbox **"Este é um turno de teste"**: só aparece pra conta superadmin (`alesk3@gmail.com`); marca `isTest: true` no `trip` já na criação.
 - Bottom-nav com 5 abas: Início | Veículo | Paradas | Despesas | Resumo
 
 ### 6.6 Veículo (`pages/vehicle.html`) — tela central
-Três sub-abas (tabs no topo, controladas por JS — não são páginas separadas):
+Três sub-abas (tabs no topo, controladas por JS — não são páginas separadas).
+
+**Trocar veículo do turno**: ícone no header abre um bottom-sheet com a lista de veículos ativos. Pro caso do condutor ter errado o veículo ao iniciar. Ao confirmar a troca: grava `vehicleId`/`vehiclePlate`/`vehicleModel`, **zera `kmStart`/`kmEnd`/`fuelStart`** (leituras físicas presas ao carro), re-roda o handoff de KM/combustível pro veículo novo, avisa "confira o KM" e pula pra aba KM. Avarias já registradas neste turno continuam no nome do veículo anterior (toast avisa).
 
 **a) Avarias**
 - Ao iniciar turno: mostra avarias já registradas no veículo (últimas 5, com fotos) pro condutor conferir
@@ -355,10 +365,11 @@ Três sub-abas (tabs no topo, controladas por JS — não são páginas separada
 - Slider visual com 5 posições (Vazio, 1/4, 1/2, 3/4, Cheio) — igual ao PDF de referência
 - Registra `fuelStart` no início e `fuelEnd` no fechamento
 - **Handoff de combustível**: se `fuelStart` ainda não foi salvo neste turno, pré-seleciona (sem salvar) o nível declarado como `fuelEnd` pelo condutor do último turno fechado do veículo, com uma dica ("Nível declarado pelo condutor anterior: X — confira no veículo e confirme"). Condutor toca no mesmo botão pra confirmar ou noutro pra corrigir — mesmo padrão do handoff de KM (sem modal). Relevante porque nem sempre o combustível fica no nível combinado pro próximo turno.
+  - **Estado visual**: a sugestão herdada do condutor anterior aparece em **amarelo** (`.fuel-option.suggested`, `--warning`) = ainda não confirmada. Qualquer toque salva e passa pra **verde** (`.selected`, `--accent`), e a dica some. Só a sugestão herdada é amarela — escolha sem turno anterior e o slider de retorno (`fuelEnd`) já são verdes direto.
 
 **c) KM / Percurso**
 - `kmStart` e `kmEnd` registrados juntos aqui (`inputmode="numeric"` pra abrir teclado numérico), um botão "Salvar KM" pros dois.
-- **Handoff de KM**: se o turno ainda não tem `kmStart`, busca o último turno fechado do mesmo veículo (`getLastClosedTrip` em `db.js`) e pré-preenche o campo com o `kmEnd` daquele turno, mostrando uma dica ("Último KM registrado: X — confira com o painel"). O condutor só sobrescreve se o painel não bater — sem modal de confirmação, o campo já vem editável.
+- **Handoff de KM**: se o turno ainda não tem `kmStart`, busca o último turno fechado do mesmo veículo (`getLastClosedTrip` em `db.js`) e pré-preenche o campo com o `kmEnd` daquele turno. O campo herdado aparece em **amarelo** (`input.km-pending`, `--warning`) = a confirmar, com dica; o botão "Salvar KM" vira **"Confirmar KM inicial"**. Tocar salva o valor herdado (volta ao normal); digitar outro e salvar = alterar. Se o valor digitado ficar abaixo do herdado, salva mas com toast de aviso (não bloqueia). Mesmo espírito do handoff de combustível (amarelo→verde).
 - Se o condutor esquecer o KM final aqui, a tela Resumo mostra um aviso antes de fechar o turno (ver 6.9) — não bloqueia o app, só avisa na hora de fechar.
 
 ### 6.7 Paradas (`pages/stops.html`)
@@ -366,7 +377,7 @@ Três sub-abas (tabs no topo, controladas por JS — não são páginas separada
 - **FAB "+ Nova Parada"** flutuante no canto inferior direito → abre bottom-sheet modal:
   - Tipo (dropdown: escritório, fábrica, loja, shopping, restaurante, outro)
   - Nome do local
-  - Hora chegada / hora saída (auto-preenche com "agora" mas editável)
+  - Chegada / saída como **`datetime-local`** (pré-preenche com "agora", editável — o condutor lança depois e pode cruzar o dia em plantão longo)
   - Observações
 - Cada parada aparece como card, tap-and-hold ou swipe pra editar/remover
 
@@ -375,30 +386,36 @@ Três sub-abas (tabs no topo, controladas por JS — não são páginas separada
 - Lista de despesas em cards
 - **FAB "+ Nova Despesa"** flutuante → bottom-sheet:
   - Tipo, valor, nº recibo, descrição
+  - **Data e hora** (`datetime-local`, `expenses[].at`) — pré-preenche com "agora", editável (o condutor lança depois)
   - Botão "Anexar foto do recibo" (opcional)
 
 ### 6.9 Resumo / Fechamento (`pages/summary.html`)
 - Mostra todos os dados do turno consolidados (KM rodados, tempo, combustível saída/retorno, gastos totais, avarias registradas)
 - `kmStart`/`kmEnd`/`fuelEnd` são preenchidos na tela Veículo, não aqui — esta tela só lê e valida. Se algo estiver faltando (KM inicial, KM final, combustível de saída/retorno), aparece um card de aviso listando o que falta, com link "Ir para Veículo"
-- Botão **"Fechar Turno"** grande, cor `--warning` (amarelo) → só habilita a confirmação se `kmEnd` e `fuelEnd` já estiverem salvos → confirmação → grava `endTime`, muda `status` para `closed`
-- Após fechado: botão **"Exportar PDF"** → gera PDF com layout similar ao checklist original (ainda TODO, ver seção 10)
+- **Card "Horários do turno"** (só com turno aberto): `datetime-local` de **Início** (salva na hora, `updateTrip`, recalcula Duração) e de **Fim** (pré-preenchido com "agora"; o valor entra no fechamento). Enquanto o card está visível, a linha "Início" só-leitura fica escondida. Depois de fechado volta pra visão só-leitura com os valores finais.
+- Botão **"Fechar Turno"** grande, cor `--warning` (amarelo) → só habilita a confirmação se `kmEnd` e `fuelEnd` já estiverem salvos **e** o Fim for depois do Início → o sheet de confirmação mostra **com qual veículo** o turno está sendo fechado + link "Veículo errado? Trocar" (→ tela Veículo) → `closeTrip` grava `endTime` (do input, não serverTimestamp) e `closedAt` (serverTimestamp), muda `status` para `closed`
+- O **"Exportar PDF"** do turno agora vive no relatório do admin (`pages/admin/trip.html`), não aqui — ver 6.10
 
-### 6.10 Admin — Cadastros e Histórico
+### 6.10 Admin — Cadastros, Histórico e Relatórios
 - `pages/admin/vehicles.html`: CRUD de veículos (lista + FAB pra adicionar)
 - `pages/admin/drivers.html`: CRUD de condutores (email vira login no Auth). Aqui o admin pode pré-criar contas antes do motorista se cadastrar sozinho.
-- `pages/admin/history.html`: lista de turnos com filtros (por veículo, por condutor, por período), timeline de avarias por veículo
+- `pages/admin/history.html`: **lista** enxuta de turnos. Filtros (veículo, condutor, período) + faixa compacta de totais do filtro (turnos, KM total, despesas totais, avarias em aberto) + um **card-resumo por turno**, clicável → abre o relatório completo. Card com selinho **TESTE** quando `isTest`. Sem abas, sem despesas agregadas, sem timeline de avarias por veículo (foi removido daqui).
+  - Filtro por veículo/condutor **+ período**: o `listTrips` de `db.js` manda só os `where()` de igualdade pro Firestore e filtra o intervalo de datas no cliente — igualdade + range em campos diferentes exigiria índice composto (ver seção 11).
+- `pages/admin/trip.html?id=<tripId>`: **relatório completo de um turno**. Cabeçalho, grid de indicadores, lista completa de paradas, despesas (com lightbox de recibo) e avarias do turno (`listDamagesByTrip`, com lightbox). Botão **"Exportar PDF"** = `window.print()` + `css/pages/report.css` (`@media print`: fundo branco, sem cromo de app, cards sem quebra, título "Relatório de Turno — placa — data"). Sem dependência de PDF.
+  - **Card "Ajustar horários (gestor)"** (`.no-print`): `datetime-local` de início e fim, editáveis **mesmo em turno fechado** — é o único ajuste pós-fechamento (as regras só liberam o admin pra `startTime`/`endTime`). Valida fim > início; ao salvar, atualiza cabeçalho e tile de Duração.
+- `pages/admin/dev.html`: tela de manutenção — ver seção 12.
 
 ## 7. Features Extras Combinadas
 
 1. **Handoff automático de turno**: `getLastClosedTrip` (em `db.js`) busca o último turno fechado do veículo pra sugerir valores — sempre editável, sem modal de confirmação (o condutor toca de novo pra confirmar ou corrige tocando/digitando outro valor).
-   - **KM** (implementado): sugere o `kmEnd` do turno anterior como `kmStart`.
-   - **Combustível** (implementado): sugere o `fuelEnd` do turno anterior como `fuelStart` — útil porque nem sempre o carro fica no nível combinado pro próximo condutor.
+   - **KM** (implementado): sugere o `kmEnd` do turno anterior como `kmStart`. Campo herdado = **amarelo**, botão "Confirmar KM inicial" até o condutor salvar (→ verde/normal).
+   - **Combustível** (implementado): sugere o `fuelEnd` do turno anterior como `fuelStart` — útil porque nem sempre o carro fica no nível combinado pro próximo condutor. Sugestão herdada = **amarela** até o condutor tocar (confirma → **verde**).
    - **Fotos/avarias** (ainda TODO): mostrar fotos e avarias do fechamento anterior lado a lado com o que o condutor está registrando agora.
 2. **Diagrama do carro clicável** para marcar localização de avarias (SVG em `assets/images/car-diagram.svg`).
 3. **Timestamp + geolocalização** nas fotos (usar `navigator.geolocation` e gravar coords no Storage metadata).
 4. **Notificação ao gestor** quando avaria nova é registrada (via Cloud Functions + FCM, ou simples email via SendGrid — deixar como TODO na v1).
 5. **Alerta de combustível baixo** no fechamento de turno.
-6. **Export PDF** do turno mantendo layout familiar do checklist atual.
+6. **Export PDF** do turno mantendo layout familiar do checklist atual — **feito** via `window.print()` + `@media print` no relatório do admin (`pages/admin/trip.html`), sem `jsPDF`.
 7. **Histórico por veículo** com timeline de avarias e condutores.
 
 ## 8. Convenções de Código
@@ -410,17 +427,21 @@ Três sub-abas (tabs no topo, controladas por JS — não são páginas separada
 - **JS**: módulos ES6 (`import`/`export`), usar `type="module"` nos `<script>`.
 - **Firebase SDK**: usar CDN modular v9+ (tree-shakable), não a versão namespaced antiga.
 - **Comentários**: só onde a intenção não é óbvia. Sem redundância.
-- **Sem dependências extras** na v1 além do Firebase SDK. Se precisar de PDF export, avaliar `jsPDF` via CDN.
+- **Sem dependências extras** na v1 além do Firebase SDK. O PDF do turno foi resolvido com `window.print()` + `@media print` (zero dependência) — não usar `jsPDF`.
 
 ## 9. Regras de Segurança Firestore (implementado em `firestore.rules`)
 
 - Condutor lê/escreve seus próprios `trips` **enquanto abertos**. Turnos com `status == 'closed'` ficam legíveis por **qualquer condutor logado** (não só o dono) — necessário pro handoff de KM entre turnos de condutores diferentes.
 - Condutor lê e cria `damages` (qualquer condutor logado lê todas, pro handoff de avarias do veículo); só admin edita/resolve.
 - Condutor lê `vehicles` e `drivers` mas não escreve (exceto o próprio perfil, sem poder trocar `role` sozinho).
-- Admin lê/escreve tudo.
-- Ninguém deleta `trips` fechados (auditoria) — nem admin.
+- Admin lê tudo. `update` de `trips` pelo admin: **só** `startTime`/`endTime`
+  (`request.resource.data.diff(resource.data).affectedKeys().hasOnly(['startTime','endTime'])`),
+  inclusive em turno fechado — é o ajuste de horário do gestor no `trip.html`. Todo o resto do turno segue imutável pós-fechamento.
+- Ninguém deleta `trips` fechados (auditoria) — **exceto o superadmin** (ver abaixo). Admin comum também não.
+- **`isSuperAdmin()`** = `request.auth.token.email == 'alesk3@gmail.com'` (conta única de manutenção/testes). Pode: `create`/`update` de `trips` fora do fluxo normal (semear turno já `closed`, com qualquer `driverId`, marcar/desmarcar `isTest`), `delete` de `trips` e `delete` de `damages`.
+- **`storage.rules`**: `create`/`update` de foto = qualquer logado (imagem, <10MB); `delete` de foto = só o e-mail do superadmin (Storage rules não leem o Firestore, então trava no `request.auth.token.email`).
 
-Qualquer mudança em `firestore.rules` exige `firebase deploy --only firestore:rules` (deploy separado do `hosting`) — já aconteceu de uma feature parecer "quebrada" só porque a regra nova não tinha sido publicada.
+Qualquer mudança em `firestore.rules` exige `firebase deploy --only firestore:rules` (deploy separado do `hosting`); mexeu em `storage.rules` também → `firebase deploy --only firestore:rules,storage:rules`. Já aconteceu de uma feature parecer "quebrada" só porque a regra nova não tinha sido publicada.
 
 ## 10. Roadmap Sugerido de Implementação
 
@@ -439,7 +460,7 @@ Qualquer mudança em `firestore.rules` exige `firebase deploy --only firestore:r
 10. Service worker completo (cache offline dos assets)
 
 **Fase 3 — Polimento:**
-11. Export PDF
+11. Export PDF — **feito** (print no relatório do admin)
 12. Notificações ao gestor
 13. Otimizações de performance e UX
 
@@ -450,8 +471,19 @@ Qualquer mudança em `firestore.rules` exige `firebase deploy --only firestore:r
 - Antes de qualquer feature nova, verificar se já existe util em `js/utils.js` ou `js/db.js` — evitar duplicação.
 - **Evitar `orderBy()` combinado com `where()` em campo diferente nas queries do Firestore** — exige índice composto que não existe por padrão e derruba a query em produção (`FirebaseError: The query requires an index`). Preferir buscar só com `where()`/`limit()` e ordenar no cliente em JS (ver funções em `db.js` como padrão) — mais simples que gerenciar `firestore.indexes.json` pro volume de dados deste app.
 - Ao alterar `js/pages/*.js`: isolar cada seção independente da tela em try/catch (ver `vehicle.js`) — uma falha numa seção (ex.: avarias) não pode impedir as outras (combustível, KM) de inicializar.
-- Todo `trip` fechado é imutável (auditoria). Correções são feitas por admin criando um registro de "ajuste".
+- Enquanto o turno está **aberto**, o condutor edita tudo: KM (incl. confirmar o herdado), combustível, `startTime` (Home/Resumo), `endTime` (Resumo, no fechamento), paradas, despesas e o **veículo** (tela Veículo). Depois de fechado, o condutor não edita mais nada.
+- Turno fechado é imutável, com **duas exceções**: o **admin** ajusta `startTime`/`endTime` no `trip.html`; o **superadmin** pode **apagar** turnos pela tela dev. Correção de outros campos em turno fechado continua TODO (registro de "ajuste").
+- `service-worker.js` tem um `CACHE_NAME` versionado (`frota-app-vN`) — **incrementar a cada deploy** que muda HTML/JS/CSS de página, senão o `stale-while-revalidate` pode servir a versão antiga por mais um carregamento.
 - Fotos no Storage: organizar em pastas por `vehicleId/tripId/` pra facilitar limpeza futura.
 - **Toda foto (avaria ou recibo) passa por `compressImage()` em `storage.js`** antes do upload — redimensiona pra no máximo 1600px no lado maior e reexporta como JPEG (qualidade 0.75), economizando Storage. Se o navegador não suportar `createImageBitmap` ou o resultado não ficar menor, sobe o arquivo original.
 - **Referência de código do usuário**: o repo `github.com/alesk3-wq/T35` tem exemplos práticos que devem ser reaproveitados — especialmente `instalar.html` (PWA install), `manifest.json`, padrão de `login.html` e a estrutura de `assets/css/design-system.css`. Reutilize a mesma abordagem de detecção de plataforma, overlay pós-install e fallback manual.
 - **Testar sempre no celular real** (ou emulador Chrome DevTools mobile). Desktop pode enganar sobre altura de teclado, safe areas, tap targets.
+
+## 12. Tela Dev / dados de teste (`pages/admin/dev.html`)
+
+Tela de manutenção **fora do menu**, só pra conta `alesk3@gmail.com` (guard: `user.email` na UI; `isSuperAdmin()` nas rules). Um link "Dev" aparece no `admin-nav` do Histórico só pra essa conta.
+
+- **Criar N turnos de teste** (padrão 10, teto 50): `createTestTrip()` em `db.js` grava turnos `status: "closed"`, `isTest: true`, com condutores/veículos **reais já cadastrados**, KM encadeado por veículo (pro handoff reagir), combustível/paradas/despesas plausíveis, `closedAt`/`startTime`/`endTime` coerentes.
+- **Lista de TODOS os turnos** (`listAllTrips()`), não só os de teste — porque os condutores também criam turnos reais testando. Cada linha: badge TESTE, botão **Marcar/Desmarcar teste** (`updateTrip({ isTest })`), botão **Apagar** (cascateia: acha `damages` do `tripId` → `deletePhoto()` de cada `photoUrl` no Storage → `deleteDamage()` → `deleteTrip()`), e botão **"Apagar todos os de teste"**.
+- Helpers novos: `db.js` → `createTestTrip`, `listAllTrips`, `deleteTrip`, `deleteDamage`; `storage.js` → `deletePhoto(url)` (aceita download URL, ignora "object-not-found").
+- Turnos `isTest` **aparecem** no Histórico/relatórios normais (com selinho TESTE) e alimentam o handoff — some tudo quando são apagados.

@@ -6,9 +6,12 @@ service firebase.storage {
     // Só usuários logados; apenas imagens até 10MB.
     match /{vehicleId}/{tripId}/{fileName} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null
+      allow create, update: if request.auth != null
         && request.resource.size < 10 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
+      // limpeza de fotos de teste — só a conta de manutenção
+      allow delete: if request.auth != null
+        && request.auth.token.email == 'alesk3@gmail.com';
     }
   }
 }

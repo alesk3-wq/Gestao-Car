@@ -79,12 +79,14 @@ export function updateTrip(tripId, data) {
   return updateDoc(doc(db, 'trips', tripId), data);
 }
 
-export function closeTrip(tripId, { kmEnd, fuelEnd }) {
+// endTime é o fim declarado pelo condutor (editável). closedAt continua sendo
+// o carimbo real de quando o fechamento aconteceu (auditoria).
+export function closeTrip(tripId, { kmEnd, fuelEnd, endTime }) {
   return updateDoc(doc(db, 'trips', tripId), {
     kmEnd,
     fuelEnd,
     status: 'closed',
-    endTime: serverTimestamp(),
+    endTime: endTime ?? serverTimestamp(),
     closedAt: serverTimestamp()
   });
 }
@@ -102,17 +104,42 @@ export async function getLastClosedTrip(vehicleId) {
   return list[0] ?? null;
 }
 
-// Histórico com filtros (admin). Sem orderBy na query — ordena no cliente.
+// Histórico com filtros (admin). Só filtros de igualdade vão pro Firestore
+// (vários "==" em campos diferentes não exigem índice composto); o range de
+// datas é aplicado no cliente pra evitar o índice composto que igualdade +
+// range exigiria (ver CLAUDE.md seção 11). Sem orderBy na query — ordena aqui.
 export async function listTrips({ vehicleId = '', driverId = '', dateFrom = '', dateTo = '' } = {}) {
   const parts = [collection(db, 'trips')];
   if (vehicleId) parts.push(where('vehicleId', '==', vehicleId));
   if (driverId) parts.push(where('driverId', '==', driverId));
-  if (dateFrom) parts.push(where('date', '>=', dateFrom));
-  if (dateTo) parts.push(where('date', '<=', dateTo));
   const snap = await getDocs(query(...parts));
   return snapToList(snap)
+    .filter((t) => (!dateFrom || (t.date || '') >= dateFrom) && (!dateTo || (t.date || '') <= dateTo))
     .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
     .slice(0, 100);
+}
+
+/* ── Manutenção / turnos de teste (só conta superadmin) ── */
+
+// Semeia um turno já fechado, fora do fluxo normal (createTrip força status "open").
+export function createTestTrip(data) {
+  return addDoc(collection(db, 'trips'), {
+    ...data,
+    isTest: true,
+    createdAt: serverTimestamp()
+  });
+}
+
+// Todos os turnos (qualquer status), pra tela de limpeza. Ordena no cliente.
+export async function listAllTrips({ max = 300 } = {}) {
+  const snap = await getDocs(collection(db, 'trips'));
+  return snapToList(snap)
+    .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+    .slice(0, max);
+}
+
+export function deleteTrip(tripId) {
+  return deleteDoc(doc(db, 'trips', tripId));
 }
 
 /* ── Avarias ── */
@@ -153,6 +180,10 @@ export async function listDamagesByTrip(tripId) {
 
 export function updateDamage(damageId, data) {
   return updateDoc(doc(db, 'damages', damageId), data);
+}
+
+export function deleteDamage(damageId) {
+  return deleteDoc(doc(db, 'damages', damageId));
 }
 
 export { serverTimestamp };

@@ -1,5 +1,8 @@
 import { requireAuth } from '/js/auth.js';
-import { getOpenTrip, updateTrip, createDamage, listDamagesByVehicle, getLastClosedTrip } from '/js/db.js';
+import {
+  getOpenTrip, updateTrip, createDamage, listDamagesByVehicle, listDamagesByTrip,
+  getLastClosedTrip, listVehicles
+} from '/js/db.js';
 import { uploadPhotos } from '/js/storage.js';
 import { renderBottomNav } from '/js/nav.js';
 import {
@@ -14,9 +17,12 @@ renderBottomNav();
 
 const FUEL_FILL = { 'vazio': '5%', '1/4': '25%', '1/2': '50%', '3/4': '75%', 'cheio': '100%' };
 
-function renderFuelOptions(container, selected, onSelect) {
+// suggested=true: o nível já vem marcado, mas em amarelo (sugestão do condutor
+// anterior, ainda não confirmada). Qualquer toque confirma e deixa verde.
+function renderFuelOptions(container, selected, onSelect, suggested = false) {
+  const markClass = suggested ? 'suggested' : 'selected';
   container.innerHTML = FUEL_LEVELS.map((level) => `
-    <button type="button" class="fuel-option ${level === selected ? 'selected' : ''}" data-level="${level}">
+    <button type="button" class="fuel-option ${level === selected ? markClass : ''}" data-level="${level}">
       <span class="fuel-bar" style="--fill:${FUEL_FILL[level]}"></span>
       ${FUEL_LABELS[level]}
     </button>
@@ -24,33 +30,41 @@ function renderFuelOptions(container, selected, onSelect) {
 
   container.querySelectorAll('.fuel-option').forEach((btn) => {
     btn.addEventListener('click', () => {
-      container.querySelectorAll('.fuel-option').forEach((b) => b.classList.remove('selected'));
+      container.querySelectorAll('.fuel-option').forEach((b) => b.classList.remove('selected', 'suggested'));
       btn.classList.add('selected');
       onSelect(btn.dataset.level);
     });
   });
 }
 
+// Re-chamável (ex.: após trocar o veículo do turno).
 function initFuel(trip, lastTrip) {
-  // Handoff: sugere o nível declarado pelo condutor anterior (pré-seleciona,
-  // sem salvar) — condutor confirma tocando de novo ou corrige tocando noutro.
+  // Handoff: sugere o nível declarado pelo condutor anterior (pré-seleciona em
+  // amarelo, sem salvar) — condutor confirma tocando de novo (fica verde) ou
+  // corrige tocando noutro.
+  const hintEl = document.getElementById('fuelHandoffHint');
+  hintEl.style.display = 'none';
+
   let fuelStartSuggested = trip.fuelStart;
+  let fuelStartIsSuggestion = false;
   if (fuelStartSuggested == null && lastTrip?.fuelEnd != null) {
     fuelStartSuggested = lastTrip.fuelEnd;
-    const hint = document.getElementById('fuelHandoffHint');
-    hint.textContent = `Nível declarado pelo condutor anterior: ${FUEL_LABELS[lastTrip.fuelEnd]} — confira no veículo e confirme.`;
-    hint.style.display = 'block';
+    fuelStartIsSuggestion = true;
+    hintEl.textContent = `Nível declarado pelo condutor anterior: ${FUEL_LABELS[lastTrip.fuelEnd]} — confira no veículo e confirme.`;
+    hintEl.style.display = 'block';
   }
 
   renderFuelOptions(document.getElementById('fuelStartOptions'), fuelStartSuggested, async (level) => {
     try {
       await updateTrip(trip.id, { fuelStart: level });
       trip.fuelStart = level;
+      const hint = document.getElementById('fuelHandoffHint');
+      if (hint) hint.style.display = 'none';
       showToast('Combustível de saída registrado.', 'success');
     } catch {
       showToast('Erro ao salvar. Tente novamente.', 'error');
     }
-  });
+  }, fuelStartIsSuggestion);
 
   renderFuelOptions(document.getElementById('fuelEndOptions'), trip.fuelEnd, async (level) => {
     try {
@@ -67,22 +81,37 @@ function initFuel(trip, lastTrip) {
 // KM inicial e final ficam juntos aqui. Se o condutor esquecer o KM final,
 // a tela Resumo avisa antes de fechar o turno (ver summary.js).
 
+// Re-chamável (ex.: após trocar o veículo do turno). Usa .onclick pra não
+// empilhar handlers a cada chamada.
 function initKm(trip, lastTrip) {
   const kmStartEl = document.getElementById('kmStart');
   const kmEndEl = document.getElementById('kmEnd');
   const kmHintEl = document.getElementById('kmHandoffHint');
+  const btnSaveKm = document.getElementById('btnSaveKm');
+
+  kmHintEl.style.display = 'none';
+  kmStartEl.classList.remove('km-pending');
+  kmStartEl.value = '';
+  kmEndEl.value = '';
+
+  const inheritedKm = lastTrip?.kmEnd ?? null;
+  let kmStartPending = false; // KM inicial veio herdado e ainda não foi confirmado
 
   if (trip.kmStart != null) {
     kmStartEl.value = trip.kmStart;
-  } else if (lastTrip?.kmEnd != null) {
-    kmStartEl.value = lastTrip.kmEnd;
-    kmHintEl.textContent = `Último KM registrado (turno anterior): ${lastTrip.kmEnd.toLocaleString('pt-BR')} — confira com o painel.`;
+  } else if (inheritedKm != null) {
+    kmStartEl.value = inheritedKm;
+    kmStartPending = true;
+    kmStartEl.classList.add('km-pending');
+    kmHintEl.textContent = `Último KM registrado (turno anterior): ${inheritedKm.toLocaleString('pt-BR')} — confira com o painel e confirme.`;
     kmHintEl.style.display = 'block';
   }
 
   if (trip.kmEnd != null) kmEndEl.value = trip.kmEnd;
 
-  document.getElementById('btnSaveKm').addEventListener('click', async () => {
+  btnSaveKm.textContent = kmStartPending ? 'Confirmar KM inicial' : 'Salvar KM';
+
+  btnSaveKm.onclick = async () => {
     const kmStart = kmStartEl.value ? Number(kmStartEl.value) : null;
     const kmEnd = kmEndEl.value ? Number(kmEndEl.value) : null;
 
@@ -95,16 +124,25 @@ function initKm(trip, lastTrip) {
       return;
     }
 
+    const belowInherited = kmStartPending && inheritedKm != null && kmStart < inheritedKm;
+
     try {
       await updateTrip(trip.id, { kmStart, kmEnd });
       trip.kmStart = kmStart;
       trip.kmEnd = kmEnd;
-      showToast('KM salvo.', 'success');
+      kmStartPending = false;
+      kmStartEl.classList.remove('km-pending');
+      kmHintEl.style.display = 'none';
+      btnSaveKm.textContent = 'Salvar KM';
+      showToast(
+        belowInherited ? 'KM salvo — atenção: menor que o do condutor anterior.' : 'KM salvo.',
+        belowInherited ? '' : 'success'
+      );
     } catch (e) {
       console.error('Erro ao salvar KM:', e);
       showToast('Erro ao salvar. Tente novamente.', 'error');
     }
-  });
+  };
 }
 
 /* ── Avarias ── */
@@ -251,6 +289,99 @@ function openDamageSheet(zone) {
   document.getElementById('damageSheet').classList.add('open');
 }
 
+/* ── Trocar veículo do turno ── */
+// Pro caso do condutor ter errado o veículo ao iniciar. Ao trocar, zera KM
+// (início/fim) e combustível de saída e re-roda o handoff pro veículo novo.
+
+async function initVehicleSwap(trip) {
+  const backdrop = document.getElementById('vehicleBackdrop');
+  const sheet = document.getElementById('vehicleSheet');
+  const picker = document.getElementById('vehiclePicker');
+  const btnOpen = document.getElementById('btnSwapVehicle');
+
+  const vehicles = await listVehicles({ activeOnly: true });
+  picker.innerHTML = vehicles
+    .map((v) => `<option value="${v.id}">${escapeHtml(v.model)} — ${escapeHtml(v.plate)}</option>`)
+    .join('');
+
+  const close = () => {
+    backdrop.classList.remove('open');
+    sheet.classList.remove('open');
+  };
+
+  btnOpen.style.display = 'flex';
+  btnOpen.addEventListener('click', () => {
+    picker.value = trip.vehicleId;
+    backdrop.classList.add('open');
+    sheet.classList.add('open');
+  });
+  backdrop.addEventListener('click', close);
+  document.getElementById('btnCancelSwap').addEventListener('click', close);
+
+  document.getElementById('btnConfirmSwap').addEventListener('click', async () => {
+    const newVehicle = vehicles.find((v) => v.id === picker.value);
+    if (!newVehicle || newVehicle.id === trip.vehicleId) {
+      close();
+      return;
+    }
+
+    const btn = document.getElementById('btnConfirmSwap');
+    btn.disabled = true;
+    btn.textContent = 'Trocando...';
+
+    try {
+      await updateTrip(trip.id, {
+        vehicleId: newVehicle.id,
+        vehiclePlate: newVehicle.plate,
+        vehicleModel: newVehicle.model,
+        kmStart: null,
+        kmEnd: null,
+        fuelStart: null
+      });
+      Object.assign(trip, {
+        vehicleId: newVehicle.id,
+        vehiclePlate: newVehicle.plate,
+        vehicleModel: newVehicle.model,
+        kmStart: null,
+        kmEnd: null,
+        fuelStart: null
+      });
+
+      document.getElementById('vehicleTitle').textContent = trip.vehicleModel || 'Veículo';
+      document.getElementById('vehiclePlateBadge').textContent = trip.vehiclePlate || '';
+
+      let lastTrip = null;
+      try {
+        lastTrip = await getLastClosedTrip(trip.vehicleId);
+      } catch (e) {
+        console.error('Erro ao buscar turno anterior:', e);
+      }
+
+      try { initFuel(trip, lastTrip); } catch (e) { console.error('initFuel falhou:', e); }
+      try { initKm(trip, lastTrip); } catch (e) { console.error('initKm falhou:', e); }
+      try { await refreshDamages(trip); } catch (e) { console.error('refreshDamages falhou:', e); }
+
+      close();
+
+      let msg = 'Veículo trocado — confira o KM inicial no painel do carro.';
+      try {
+        const dmgs = await listDamagesByTrip(trip.id);
+        if (dmgs.length) msg += ' Avarias já registradas ficam no veículo anterior.';
+      } catch {}
+      showToast(msg, 'success');
+
+      const kmTab = document.querySelector('.tab[data-tab="km"]');
+      if (kmTab) kmTab.click();
+    } catch (e) {
+      console.error('Erro ao trocar veículo:', e);
+      showToast('Erro ao trocar veículo.', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Trocar veículo';
+    }
+  });
+}
+
 /* ── Orquestração ── */
 // Roda por último, depois de todas as funções/consts acima já declaradas
 // (evita ReferenceError de temporal dead zone ao chamar init* cedo demais).
@@ -284,6 +415,7 @@ if (!trip) {
   try { initTabs(); } catch (e) { console.error('initTabs falhou:', e); }
   try { initFuel(trip, lastTrip); } catch (e) { console.error('initFuel falhou:', e); }
   try { initKm(trip, lastTrip); } catch (e) { console.error('initKm falhou:', e); }
+  try { await initVehicleSwap(trip); } catch (e) { console.error('initVehicleSwap falhou:', e); }
   try {
     await initDamages(trip, driver);
   } catch (e) {

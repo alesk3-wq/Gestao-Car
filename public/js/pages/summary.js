@@ -1,9 +1,9 @@
 import { requireAuth } from '/js/auth.js';
-import { getOpenTrip, closeTrip, listDamagesByTrip } from '/js/db.js';
+import { getOpenTrip, closeTrip, updateTrip, listDamagesByTrip } from '/js/db.js';
 import { renderBottomNav } from '/js/nav.js';
 import {
   FUEL_LABELS, escapeHtml, formatCurrency, formatDuration, formatDateTime,
-  showToast, registerServiceWorker
+  showToast, registerServiceWorker, toDateTimeLocalValue, parseDateTimeLocal
 } from '/js/utils.js';
 
 registerServiceWorker();
@@ -27,6 +27,7 @@ async function render() {
   document.getElementById('sumPlate').textContent = trip.vehiclePlate || '';
   document.getElementById('sumDriver').textContent = trip.driverName || driver.name;
   document.getElementById('sumStart').textContent = formatDateTime(trip.startTime);
+  if (trip.status === 'open') setupTimeEdit();
   if (trip.secondDriverName) {
     document.getElementById('sumSecondDriver').textContent = trip.secondDriverName;
     document.getElementById('sumSecondDriverRow').hidden = false;
@@ -61,6 +62,62 @@ async function render() {
   renderPending();
 }
 
+// Ajuste de horários — só com turno aberto. Início salva na hora; fim é lido
+// no fechamento (ver initClose).
+function setupTimeEdit() {
+  const card = document.getElementById('timeEditCard');
+  const startInput = document.getElementById('sumStartInput');
+  const endInput = document.getElementById('sumEndInput');
+
+  card.hidden = false;
+  document.getElementById('sumStartRow').hidden = true;
+
+  startInput.value = toDateTimeLocalValue(trip.startTime);
+  endInput.value = toDateTimeLocalValue(trip.endTime) || toDateTimeLocalValue(new Date());
+
+  startInput.addEventListener('change', async () => {
+    const newStart = parseDateTimeLocal(startInput.value);
+    if (!newStart) {
+      showToast('Horário inválido.', 'error');
+      startInput.value = toDateTimeLocalValue(trip.startTime);
+      return;
+    }
+    if (newStart.getTime() > Date.now() + 60000) {
+      showToast('O início não pode ser no futuro.', 'error');
+      startInput.value = toDateTimeLocalValue(trip.startTime);
+      return;
+    }
+    try {
+      await updateTrip(trip.id, { startTime: newStart });
+      trip.startTime = newStart;
+      document.getElementById('sumStart').textContent = formatDateTime(trip.startTime);
+      document.getElementById('sumDuration').textContent = formatDuration(trip.startTime, trip.endTime);
+      showToast('Início do turno atualizado.', 'success');
+    } catch (e) {
+      console.error(e);
+      showToast('Erro ao salvar. Tente novamente.', 'error');
+      startInput.value = toDateTimeLocalValue(trip.startTime);
+    }
+  });
+}
+
+// Fim declarado do turno, lido do input no fechamento. Retorna Date válido
+// ou null (com toast) se estiver vazio/antes do início.
+function resolveEndTime() {
+  const endInput = document.getElementById('sumEndInput');
+  const endTime = parseDateTimeLocal(endInput?.value);
+  if (!endTime) {
+    showToast('Informe o horário de fim do turno.', 'error');
+    return null;
+  }
+  const start = trip.startTime?.toDate ? trip.startTime.toDate() : new Date(trip.startTime);
+  if (endTime.getTime() <= start.getTime()) {
+    showToast('O fim do turno tem que ser depois do início.', 'error');
+    return null;
+  }
+  return endTime;
+}
+
 // Lista o que falta preencher antes de fechar
 function renderPending() {
   const missing = [];
@@ -89,11 +146,15 @@ function initClose() {
   const sheet = document.getElementById('confirmSheet');
   const btnClose = document.getElementById('btnCloseTrip');
 
+  document.getElementById('confirmVehicle').textContent =
+    [trip.vehicleModel, trip.vehiclePlate].filter(Boolean).join(' · ') || 'veículo não informado';
+
   btnClose.addEventListener('click', () => {
     if (trip.kmEnd == null || !trip.fuelEnd) {
       showToast('Registre KM final e combustível de retorno na tela Veículo primeiro.', 'error');
       return;
     }
+    if (!resolveEndTime()) return;
     backdrop.classList.add('open');
     sheet.classList.add('open');
   });
@@ -106,18 +167,31 @@ function initClose() {
   document.getElementById('btnCancelClose').addEventListener('click', closeSheet);
 
   document.getElementById('btnConfirmClose').addEventListener('click', async () => {
+    const endTime = resolveEndTime();
+    if (!endTime) {
+      closeSheet();
+      return;
+    }
+
     const btn = document.getElementById('btnConfirmClose');
     btn.disabled = true;
     btn.textContent = 'Fechando...';
 
     try {
-      await closeTrip(trip.id, { kmEnd: trip.kmEnd, fuelEnd: trip.fuelEnd });
+      await closeTrip(trip.id, { kmEnd: trip.kmEnd, fuelEnd: trip.fuelEnd, endTime });
       trip.status = 'closed';
+      trip.endTime = endTime;
       closeSheet();
       document.getElementById('sumStatus').textContent = 'Fechado';
       document.getElementById('sumStatus').className = 'badge badge-muted';
       document.getElementById('closedBanner').style.display = 'flex';
       btnClose.style.display = 'none';
+
+      // Volta pra visão só-leitura dos horários, já com os valores finais
+      document.getElementById('timeEditCard').hidden = true;
+      document.getElementById('sumStartRow').hidden = false;
+      document.getElementById('sumStart').textContent = formatDateTime(trip.startTime);
+      document.getElementById('sumDuration').textContent = formatDuration(trip.startTime, trip.endTime);
       // TODO v3: botão "Exportar PDF" (jsPDF via CDN) com layout do checklist original
       showToast('Turno fechado com sucesso.', 'success');
     } catch (error) {

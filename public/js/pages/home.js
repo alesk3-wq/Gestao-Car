@@ -1,8 +1,9 @@
 import { requireAuth, logout } from '/js/auth.js';
-import { getOpenTrip, listVehicles, listDrivers, createTrip } from '/js/db.js';
+import { getOpenTrip, listVehicles, listDrivers, createTrip, updateTrip } from '/js/db.js';
 import { renderBottomNav } from '/js/nav.js';
 import {
-  escapeHtml, formatCurrency, formatDuration, todayISO, showToast, registerServiceWorker
+  escapeHtml, formatCurrency, formatDuration, todayISO, showToast, registerServiceWorker,
+  toDateTimeLocalValue, parseDateTimeLocal
 } from '/js/utils.js';
 
 registerServiceWorker();
@@ -20,10 +21,15 @@ const els = {
 
 document.getElementById('btnLogout').addEventListener('click', logout);
 
-const { driver } = await requireAuth();
+const { user, driver } = await requireAuth();
 
 if (driver.role === 'admin') {
   document.getElementById('linkAdminPanel').style.display = 'flex';
+}
+
+const isSuperAdmin = user.email === 'alesk3@gmail.com';
+if (isSuperAdmin) {
+  document.getElementById('devTestToggle').hidden = false;
 }
 
 document.getElementById('greetingName').textContent = `Olá, ${driver.name.split(' ')[0]}!`;
@@ -47,6 +53,32 @@ function renderOpenTrip(trip) {
   document.getElementById('tripDuration').textContent = formatDuration(trip.startTime, null);
   document.getElementById('tripStops').textContent = (trip.stops || []).length;
   document.getElementById('tripExpenses').textContent = formatCurrency(trip.totalExpenses || 0);
+
+  const startInput = document.getElementById('tripStartInput');
+  startInput.value = toDateTimeLocalValue(trip.startTime);
+  startInput.addEventListener('change', async () => {
+    const newStart = parseDateTimeLocal(startInput.value);
+    if (!newStart) {
+      showToast('Horário inválido.', 'error');
+      startInput.value = toDateTimeLocalValue(trip.startTime);
+      return;
+    }
+    if (newStart.getTime() > Date.now() + 60000) {
+      showToast('O início não pode ser no futuro.', 'error');
+      startInput.value = toDateTimeLocalValue(trip.startTime);
+      return;
+    }
+    try {
+      await updateTrip(trip.id, { startTime: newStart });
+      trip.startTime = newStart;
+      document.getElementById('tripDuration').textContent = formatDuration(trip.startTime, null);
+      showToast('Início do turno atualizado.', 'success');
+    } catch (e) {
+      console.error(e);
+      showToast('Erro ao salvar. Tente novamente.', 'error');
+      startInput.value = toDateTimeLocalValue(trip.startTime);
+    }
+  });
 
   els.btnContinue.addEventListener('click', () => {
     window.location.href = '/pages/vehicle.html';
@@ -96,6 +128,7 @@ async function renderStartFlow() {
     els.btnStart.textContent = 'Iniciando...';
 
     try {
+      const isTest = isSuperAdmin && document.getElementById('isTestCheckbox').checked;
       await createTrip({
         driverId: driver.id,
         driverName: driver.name,
@@ -107,7 +140,8 @@ async function renderStartFlow() {
         date: todayISO(),
         startTime: new Date(),
         kmStart: null,
-        fuelStart: null
+        fuelStart: null,
+        ...(isTest ? { isTest: true } : {})
       });
       // Direto pra tela do veículo: conferir avarias, combustível e KM inicial
       window.location.href = '/pages/vehicle.html';

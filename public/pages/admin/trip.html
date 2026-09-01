@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Relatório do turno - SegAut-App</title>
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SegAut-App">
+    <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+    <link rel="icon" type="image/png" href="/assets/icons/favicon.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="stylesheet" href="/css/design-system.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/pages/admin.css">
+    <link rel="stylesheet" href="/css/pages/summary.css">
+    <link rel="stylesheet" href="/css/pages/stops.css">
+    <link rel="stylesheet" href="/css/pages/expenses.css">
+    <link rel="stylesheet" href="/css/pages/vehicle.css">
+    <link rel="stylesheet" href="/css/pages/report.css">
+</head>
+<body>
+    <header class="app-header">
+        <a class="header-action" href="/pages/admin/history.html" aria-label="Voltar ao histórico">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </a>
+        <h1>Relatório do turno</h1>
+        <button class="header-action" id="btnPrint" aria-label="Exportar PDF">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        </button>
+    </header>
+
+    <main class="page" style="padding-bottom: 32px">
+        <div class="spinner" id="loading"></div>
+
+        <div id="notFound" class="empty-state" style="display:none">
+            <p>Turno não encontrado.</p>
+            <p style="margin-top:8px"><a href="/pages/admin/history.html">Voltar ao histórico</a></p>
+        </div>
+
+        <div id="content" style="display:none">
+            <div class="print-title" id="printTitle"></div>
+
+            <div class="card">
+                <div class="card-row">
+                    <div>
+                        <h2 id="repVehicle">—</h2>
+                        <p class="card-label" id="repPlate"></p>
+                    </div>
+                    <span class="badge badge-muted" id="repStatus">—</span>
+                </div>
+                <hr class="card-divider">
+                <div class="card-row">
+                    <span class="card-label">Condutor</span>
+                    <span class="card-value" id="repDriver">—</span>
+                </div>
+                <div class="card-row" style="margin-top:8px" id="repSecondDriverRow" hidden>
+                    <span class="card-label">Copiloto</span>
+                    <span class="card-value" id="repSecondDriver">—</span>
+                </div>
+                <div class="card-row" style="margin-top:8px">
+                    <span class="card-label">Data</span>
+                    <span class="card-value" id="repDate">—</span>
+                </div>
+                <div class="card-row" style="margin-top:8px">
+                    <span class="card-label">Início</span>
+                    <span class="card-value" id="repStart">—</span>
+                </div>
+                <div class="card-row" style="margin-top:8px">
+                    <span class="card-label">Fim</span>
+                    <span class="card-value" id="repEnd">—</span>
+                </div>
+            </div>
+
+            <div class="card no-print" id="timeAdjustCard">
+                <h3>Ajustar horários (gestor)</h3>
+                <p class="card-label" style="margin:4px 0 12px">
+                    Único campo editável em turno já fechado. Corrige quando o condutor não abriu/fechou na hora.
+                </p>
+                <div class="form-group">
+                    <label for="adjStart">Início do turno</label>
+                    <input type="datetime-local" id="adjStart">
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                    <label for="adjEnd">Fim do turno</label>
+                    <input type="datetime-local" id="adjEnd">
+                </div>
+            </div>
+
+            <div class="summary-grid">
+                <div class="summary-tile">
+                    <div class="tile-label">KM rodados</div>
+                    <div class="tile-value" id="repKm">—</div>
+                    <div class="tile-sub" id="repKmDetail"></div>
+                </div>
+                <div class="summary-tile">
+                    <div class="tile-label">Tempo de turno</div>
+                    <div class="tile-value" id="repDuration">—</div>
+                </div>
+                <div class="summary-tile">
+                    <div class="tile-label">Combustível</div>
+                    <div class="tile-value" id="repFuel">—</div>
+                    <div class="tile-sub">saída → retorno</div>
+                </div>
+                <div class="summary-tile">
+                    <div class="tile-label">Despesas</div>
+                    <div class="tile-value" id="repExpenses">—</div>
+                    <div class="tile-sub" id="repExpensesCount"></div>
+                </div>
+                <div class="summary-tile">
+                    <div class="tile-label">Paradas</div>
+                    <div class="tile-value" id="repStops">—</div>
+                </div>
+                <div class="summary-tile" id="repDamagesTile">
+                    <div class="tile-label">Avarias novas</div>
+                    <div class="tile-value" id="repDamages">—</div>
+                    <div class="tile-sub">neste turno</div>
+                </div>
+            </div>
+
+            <section class="section-gap">
+                <h2 style="margin-bottom:12px">Paradas</h2>
+                <div id="stopsList"></div>
+            </section>
+
+            <section class="section-gap">
+                <h2 style="margin-bottom:12px">Despesas</h2>
+                <div class="card total-card">
+                    <div class="total-label">Total do turno</div>
+                    <div class="total-value" id="repExpensesTotal">R$ 0,00</div>
+                </div>
+                <div id="expensesReportList" class="section-gap"></div>
+            </section>
+
+            <section class="section-gap">
+                <h2 style="margin-bottom:12px">Avarias registradas</h2>
+                <div id="damagesList"></div>
+            </section>
+
+            <button class="btn btn-secondary" id="btnPrintBottom" style="margin-top:24px">Exportar PDF</button>
+        </div>
+    </main>
+
+    <script type="module" src="/js/pages/admin/trip.js"></script>
+</body>
+</html>

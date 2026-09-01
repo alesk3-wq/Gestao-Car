@@ -96,6 +96,11 @@
 .photo-input-btn input[type="file"] { display: none; }
 
 /* KM */
+/* KM inicial herdado do condutor anterior, ainda não confirmado */
+input.km-pending {
+  border-color: var(--warning);
+}
+
 .km-summary {
   display: flex;
   align-items: center;

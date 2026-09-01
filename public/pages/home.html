@@ -62,6 +62,11 @@
                 </div>
             </div>
 
+            <label class="card section-gap dev-test-toggle" id="devTestToggle" hidden style="display:flex;align-items:center;gap:10px;cursor:pointer">
+                <input type="checkbox" id="isTestCheckbox" style="width:20px;height:20px">
+                <span>Este é um turno de teste</span>
+            </label>
+
             <button class="btn btn-primary sticky-cta" id="btnStartTrip">Iniciar Turno</button>
         </section>
 
@@ -74,6 +79,10 @@
                 </div>
                 <h2 id="tripVehicle">—</h2>
                 <p class="card-label" id="tripPlate"></p>
+                <div class="form-group" style="margin:12px 0 0">
+                    <label for="tripStartInput">Início do turno</label>
+                    <input type="datetime-local" id="tripStartInput">
+                </div>
                 <div class="trip-metrics">
                     <div class="trip-metric">
                         <div class="metric-value" id="tripDuration">—</div>

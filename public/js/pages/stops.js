@@ -2,7 +2,7 @@ import { requireAuth } from '/js/auth.js';
 import { getOpenTrip, updateTrip } from '/js/db.js';
 import { renderBottomNav } from '/js/nav.js';
 import {
-  STOP_TYPES, uuid, escapeHtml, formatTime, nowTimeValue, timeValueToDate,
+  STOP_TYPES, uuid, escapeHtml, formatTime, toDateTimeLocalValue, parseDateTimeLocal,
   showToast, registerServiceWorker
 } from '/js/utils.js';
 
@@ -86,18 +86,14 @@ function openSheet(stopId) {
   document.getElementById('btnDeleteStop').style.display = stop ? 'flex' : 'none';
   document.getElementById('stopType').value = stop?.type || STOP_TYPES[0];
   document.getElementById('stopName').value = stop?.name || '';
-  document.getElementById('stopArrival').value = stop ? toTimeValue(stop.arrivalTime) : nowTimeValue();
-  document.getElementById('stopDeparture').value = stop ? toTimeValue(stop.departureTime) : nowTimeValue();
+  document.getElementById('stopArrival').value =
+    stop ? toDateTimeLocalValue(stop.arrivalTime) : toDateTimeLocalValue(new Date());
+  document.getElementById('stopDeparture').value =
+    stop ? toDateTimeLocalValue(stop.departureTime) : toDateTimeLocalValue(new Date());
   document.getElementById('stopNotes').value = stop?.notes || '';
 
   document.getElementById('stopBackdrop').classList.add('open');
   document.getElementById('stopSheet').classList.add('open');
-}
-
-function toTimeValue(ts) {
-  if (!ts) return '';
-  const d = ts.toDate ? ts.toDate() : new Date(ts);
-  return d.toTimeString().slice(0, 5);
 }
 
 function closeSheet() {
@@ -115,8 +111,8 @@ async function saveStop() {
   const data = {
     type: document.getElementById('stopType').value,
     name,
-    arrivalTime: timeValueToDate(document.getElementById('stopArrival').value),
-    departureTime: timeValueToDate(document.getElementById('stopDeparture').value),
+    arrivalTime: parseDateTimeLocal(document.getElementById('stopArrival').value) || new Date(),
+    departureTime: parseDateTimeLocal(document.getElementById('stopDeparture').value) || new Date(),
     notes: document.getElementById('stopNotes').value.trim()
   };
 

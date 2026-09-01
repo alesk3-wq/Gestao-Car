@@ -1,0 +1,101 @@
+/* Relatório do turno (admin) — tela escura normal + layout de impressão (PDF) */
+
+/* Bloco de título que só aparece no PDF impresso */
+.print-title { display: none; }
+
+/* ── Impressão / "Salvar como PDF" ──
+   Fundo branco, texto preto, sem cromo de app — parecido com o checklist em papel. */
+@media print {
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  .app-header,
+  .header-action,
+  .btn,
+  .spinner,
+  .lightbox-backdrop,
+  .toast,
+  .no-print {
+    display: none !important;
+  }
+
+  .page {
+    padding: 12px !important;
+  }
+
+  .print-title {
+    display: block !important;
+    font-size: 18px;
+    font-weight: 700;
+    color: #000;
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #000;
+  }
+
+  .card,
+  .summary-tile {
+    background: #fff !important;
+    border: 1px solid #999 !important;
+    border-radius: 6px !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+  }
+
+  .total-card {
+    background: #fff !important;
+    border: 1px solid #999 !important;
+  }
+
+  h2 {
+    color: #000 !important;
+    page-break-after: avoid;
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* Textos secundários: cinza escuro em vez de branco/claro */
+  .card-label,
+  .tile-label,
+  .tile-sub,
+  .list-sub,
+  .stop-times,
+  .stop-notes,
+  .expense-desc,
+  .damage-desc,
+  .damage-meta {
+    color: #333 !important;
+  }
+
+  .card-value,
+  .tile-value,
+  .total-value,
+  strong {
+    color: #000 !important;
+  }
+
+  .badge {
+    background: #fff !important;
+    color: #000 !important;
+    border: 1px solid #777;
+  }
+
+  .damage-thumb,
+  .receipt-thumb {
+    border: 1px solid #999 !important;
+  }
+
+  a {
+    color: #000 !important;
+    text-decoration: none;
+  }
+
+  section.section-gap {
+    margin-top: 16px;
+  }
+}

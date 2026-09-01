@@ -91,6 +91,21 @@ export function nowTimeValue() {
   return new Date().toTimeString().slice(0, 5);
 }
 
+// Timestamp/Date → "YYYY-MM-DDTHH:mm" no fuso local, pra <input type="datetime-local">
+export function toDateTimeLocalValue(ts) {
+  const d = toDate(ts);
+  if (!d) return '';
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+// "YYYY-MM-DDTHH:mm" (hora local) → Date, ou null se vazio/inválido
+export function parseDateTimeLocal(str) {
+  if (!str) return null;
+  const d = new Date(str);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 // Converte "HH:MM" de hoje em Date
 export function timeValueToDate(hhmm) {
   if (!hhmm) return null;

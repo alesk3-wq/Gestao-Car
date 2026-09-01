@@ -180,6 +180,7 @@
 .input,
 input[type="text"], input[type="email"], input[type="password"],
 input[type="number"], input[type="time"], input[type="date"],
+input[type="datetime-local"],
 select, textarea {
   width: 100%;
   min-height: 52px;
@@ -487,4 +488,11 @@ select {
   background: rgba(0, 212, 122, 0.12);
   border-color: var(--accent);
   color: var(--accent);
+}
+
+/* Sugestão do condutor anterior, ainda não confirmada (toque pra confirmar) */
+.fuel-option.suggested {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: var(--warning);
+  color: var(--warning);
 }

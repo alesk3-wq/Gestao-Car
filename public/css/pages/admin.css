@@ -68,13 +68,57 @@
 
 .filters .full { grid-column: 1 / -1; }
 
-/* Card de turno no histórico */
+/* Card de turno no histórico (link pro relatório completo) */
+.trip-card {
+  display: block;
+  position: relative;
+  color: inherit;
+  text-decoration: none;
+}
+
+.trip-card:active { background: var(--bg-elevated); }
+
+.trip-card .trip-open {
+  display: block;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
 .trip-card .trip-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
 }
+
+.trip-card .list-sub {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.trip-badges {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* Tela dev: linhas não são link, ganham botões de ação */
+.dev-trip-row { cursor: default; }
+
+.dev-row-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.dev-row-actions .btn { flex: 1; }
 
 .trip-card .trip-detail {
   display: grid;

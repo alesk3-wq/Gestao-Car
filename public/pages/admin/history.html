@@ -14,9 +14,7 @@
     <link rel="stylesheet" href="/css/design-system.css">
     <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/css/pages/admin.css">
-    <link rel="stylesheet" href="/css/pages/vehicle.css">
     <link rel="stylesheet" href="/css/pages/summary.css">
-    <link rel="stylesheet" href="/css/pages/expenses.css">
 </head>
 <body>
     <header class="app-header">
@@ -46,7 +44,7 @@
 
         <div class="spinner" id="loading"></div>
 
-        <!-- Visão geral do conjunto filtrado -->
+        <!-- Totais do conjunto filtrado -->
         <div class="summary-grid" id="statsGrid">
             <div class="summary-tile">
                 <div class="tile-label">Turnos</div>
@@ -66,31 +64,7 @@
             </div>
         </div>
 
-        <!-- Timeline de avarias (aparece quando um veículo é filtrado) -->
-        <section id="damagesSection" class="section-gap" style="display:none">
-            <h2 style="margin-bottom:12px">Avarias do veículo</h2>
-            <div id="damagesList"></div>
-        </section>
-
-        <div class="tabs section-gap">
-            <button class="tab active" data-tab="turnos">Turnos</button>
-            <button class="tab" data-tab="despesas">Despesas</button>
-        </div>
-
-        <div class="tab-panel active" id="panel-turnos">
-            <div id="tripsList" style="margin-top:12px"></div>
-        </div>
-
-        <div class="tab-panel" id="panel-despesas">
-            <div class="form-group" style="margin-top:12px">
-                <select id="filterExpenseType"></select>
-            </div>
-            <div class="card total-card">
-                <div class="total-label">Total no período</div>
-                <div class="total-value" id="expensesTotalValue">R$ 0,00</div>
-            </div>
-            <div id="expensesList" class="section-gap"></div>
-        </div>
+        <div id="tripsList" class="section-gap"></div>
     </main>
 
     <script type="module" src="/js/pages/admin/history.js"></script>

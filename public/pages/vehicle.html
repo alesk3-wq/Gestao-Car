@@ -19,6 +19,9 @@
     <header class="app-header">
         <h1 id="vehicleTitle">Veículo</h1>
         <span class="badge badge-accent" id="vehiclePlateBadge"></span>
+        <button class="header-action" id="btnSwapVehicle" aria-label="Trocar veículo" style="display:none">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        </button>
     </header>
 
     <div class="tabs">
@@ -115,6 +118,23 @@
 
         <button class="btn btn-primary" id="btnSaveDamage">Registrar Avaria Nova</button>
         <button class="btn btn-secondary" id="btnCancelDamage" style="margin-top:8px">Cancelar</button>
+    </div>
+
+    <!-- Bottom-sheet: trocar veículo do turno -->
+    <div class="sheet-backdrop" id="vehicleBackdrop"></div>
+    <div class="sheet" id="vehicleSheet">
+        <div class="sheet-handle"></div>
+        <h2>Trocar veículo</h2>
+        <p style="color:var(--text-secondary);font-size:14px;margin-bottom:16px">
+            Use se errou o veículo ao iniciar o turno. KM (início/fim) e combustível de saída
+            serão zerados pra você reconferir no carro certo.
+        </p>
+        <div class="form-group">
+            <label for="vehiclePicker">Veículo</label>
+            <select id="vehiclePicker"></select>
+        </div>
+        <button class="btn btn-primary" id="btnConfirmSwap">Trocar veículo</button>
+        <button class="btn btn-secondary" id="btnCancelSwap" style="margin-top:8px">Cancelar</button>
     </div>
 
     <nav id="bottomNav" data-active="vehicle"></nav>

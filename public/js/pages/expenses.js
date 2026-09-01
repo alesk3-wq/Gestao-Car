@@ -4,6 +4,7 @@ import { uploadPhoto } from '/js/storage.js';
 import { renderBottomNav } from '/js/nav.js';
 import {
   EXPENSE_TYPES, EXPENSE_TYPE_ICONS, uuid, escapeHtml, formatCurrency, parseCurrency,
+  formatDateTime, toDateTimeLocalValue, parseDateTimeLocal,
   showToast, registerServiceWorker, openLightbox
 } from '/js/utils.js';
 
@@ -75,6 +76,7 @@ function renderList() {
           <strong>${e.type[0].toUpperCase() + e.type.slice(1)}</strong>
         </div>
         <p class="expense-desc">${escapeHtml(e.description || '')}${e.receiptNumber ? ` · Recibo ${escapeHtml(e.receiptNumber)}` : ''}</p>
+        ${e.at ? `<p class="expense-desc">${formatDateTime(e.at)}</p>` : ''}
       </div>
       ${e.receiptPhotoUrl ? `<img class="receipt-thumb" src="${escapeHtml(e.receiptPhotoUrl)}" alt="Recibo">` : ''}
       <span class="expense-value">${formatCurrency(e.value)}</span>
@@ -104,6 +106,8 @@ function openSheet(expenseId) {
     : '';
   document.getElementById('expenseReceipt').value = expense?.receiptNumber || '';
   document.getElementById('expenseDesc').value = expense?.description || '';
+  document.getElementById('expenseAt').value =
+    toDateTimeLocalValue(expense?.at) || toDateTimeLocalValue(new Date());
   document.getElementById('receiptPreview').innerHTML = expense?.receiptPhotoUrl
     ? `<img src="${escapeHtml(expense.receiptPhotoUrl)}" alt="Recibo">`
     : '';
@@ -141,6 +145,7 @@ async function saveExpense() {
       value,
       receiptNumber: document.getElementById('expenseReceipt').value.trim(),
       description: document.getElementById('expenseDesc').value.trim(),
+      at: parseDateTimeLocal(document.getElementById('expenseAt').value) || new Date(),
       receiptPhotoUrl
     };
 
