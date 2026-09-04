@@ -63,6 +63,13 @@ export function parseCurrency(str) {
 function toDate(ts) {
   if (!ts) return null;
   if (ts.toDate) return ts.toDate(); // Firestore Timestamp
+  // "YYYY-MM-DD" puro (trip.date, maintenance.date, nextRevisionDate...): o
+  // construtor new Date(str) trata isso como meia-noite UTC, o que recua um
+  // dia na exibição em fusos negativos (Brasil, UTC-3). Monta no fuso local.
+  if (typeof ts === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(ts)) {
+    const [y, m, d] = ts.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
   return new Date(ts);
 }
 
