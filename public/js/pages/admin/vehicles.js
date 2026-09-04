@@ -39,7 +39,10 @@ function renderList() {
       <div class="list-info">
         <div class="card-row">
           <strong>${escapeHtml(v.model)}</strong>
-          ${v.active ? '' : '<span class="badge badge-muted">Inativo</span>'}
+          <span>
+            ${v.isTest ? '<span class="badge badge-warning">TESTE</span>' : ''}
+            ${v.active ? '' : '<span class="badge badge-muted">Inativo</span>'}
+          </span>
         </div>
         <p class="list-sub">${escapeHtml(v.plate)} · ${escapeHtml(v.fleetNumber || '')}</p>
       </div>

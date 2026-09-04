@@ -32,6 +32,41 @@ export function updateVehicle(vehicleId, data) {
   return updateDoc(doc(db, 'vehicles', vehicleId), data);
 }
 
+export function deleteVehicle(vehicleId) {
+  return deleteDoc(doc(db, 'vehicles', vehicleId));
+}
+
+// Veículo de teste (tela dev) — active:false pra nunca aparecer na Home do
+// condutor (listVehicles({ activeOnly: true })), isTest:true pra ficar
+// identificável e apagável em cascata junto com as revisões dele.
+export function createTestVehicle(data) {
+  return addDoc(collection(db, 'vehicles'), {
+    ...data,
+    active: false,
+    isTest: true,
+    createdAt: serverTimestamp()
+  });
+}
+
+/* ── Revisões / manutenção preventiva ── */
+
+export function createMaintenance(data) {
+  return addDoc(collection(db, 'maintenance'), { ...data, createdAt: serverTimestamp() });
+}
+
+// Sem orderBy na query — ordena por data no cliente (evita índice composto).
+export async function listMaintenanceByVehicle(vehicleId) {
+  const snap = await getDocs(query(
+    collection(db, 'maintenance'),
+    where('vehicleId', '==', vehicleId)
+  ));
+  return snapToList(snap).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+}
+
+export function deleteMaintenance(id) {
+  return deleteDoc(doc(db, 'maintenance', id));
+}
+
 /* ── Condutores ── */
 
 export async function listDrivers() {

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Revisões - SegAut-App</title>
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SegAut-App">
+    <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+    <link rel="icon" type="image/png" href="/assets/icons/favicon.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="stylesheet" href="/css/design-system.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/pages/admin.css">
+    <link rel="stylesheet" href="/css/pages/summary.css">
+</head>
+<body>
+    <header class="app-header">
+        <h1>Revisões</h1>
+        <a class="header-action" href="/pages/home.html" aria-label="Modo condutor">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>
+        </a>
+        <button class="header-action" id="btnLogout" aria-label="Sair">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+    </header>
+
+    <main class="page" style="padding-bottom: 32px">
+        <nav class="admin-nav">
+            <a href="/pages/admin/history.html">Histórico</a>
+            <a href="/pages/admin/vehicles.html">Veículos</a>
+            <a href="/pages/admin/drivers.html">Condutores</a>
+            <a href="/pages/admin/maintenance.html" class="active">Revisões</a>
+        </nav>
+
+        <div class="spinner" id="loading"></div>
+
+        <div class="summary-grid rev-stats" id="statsGrid">
+            <div class="summary-tile">
+                <div class="tile-label">Em dia</div>
+                <div class="tile-value" id="statOk">—</div>
+            </div>
+            <div class="summary-tile">
+                <div class="tile-label">Vencendo</div>
+                <div class="tile-value" id="statSoon">—</div>
+            </div>
+            <div class="summary-tile">
+                <div class="tile-label">Vencidas</div>
+                <div class="tile-value" id="statOverdue">—</div>
+            </div>
+        </div>
+
+        <div id="vehiclesList" class="section-gap"></div>
+    </main>
+
+    <!-- Bottom-sheet: registrar revisão -->
+    <div class="sheet-backdrop" id="revBackdrop"></div>
+    <div class="sheet" id="revSheet">
+        <div class="sheet-handle"></div>
+        <h2 id="revSheetTitle">Registrar revisão</h2>
+
+        <div class="form-group">
+            <label for="revDate">Data</label>
+            <input type="date" id="revDate">
+        </div>
+        <div class="form-group">
+            <label for="revKm">KM na revisão</label>
+            <input type="number" id="revKm" inputmode="numeric" placeholder="Ex: 45230">
+        </div>
+        <div class="form-group">
+            <label for="revType">Tipo</label>
+            <select id="revType"></select>
+        </div>
+        <div class="form-group">
+            <label for="revDesc">Descrição</label>
+            <textarea id="revDesc" placeholder="Ex: revisão de 40.000 km, filtros e óleo"></textarea>
+        </div>
+        <div class="form-group">
+            <label for="revCost">Custo (R$, opcional)</label>
+            <input type="text" id="revCost" inputmode="decimal" placeholder="0,00">
+        </div>
+
+        <hr class="card-divider">
+        <h3 style="margin-bottom:12px">Próxima revisão</h3>
+        <div class="form-group">
+            <label for="revNextKm">KM alvo</label>
+            <input type="number" id="revNextKm" inputmode="numeric" placeholder="Ex: 55230">
+        </div>
+        <div class="form-group">
+            <label for="revNextDate">Data alvo</label>
+            <input type="date" id="revNextDate">
+        </div>
+
+        <button class="btn btn-primary" id="btnSaveRev">Salvar revisão</button>
+        <button class="btn btn-secondary" id="btnCancelRev" style="margin-top:8px">Cancelar</button>
+    </div>
+
+    <!-- Bottom-sheet: histórico de revisões do veículo -->
+    <div class="sheet-backdrop" id="histBackdrop"></div>
+    <div class="sheet" id="histSheet">
+        <div class="sheet-handle"></div>
+        <h2 id="histSheetTitle">Histórico de revisões</h2>
+        <div id="histList"></div>
+        <button class="btn btn-secondary" id="btnCloseHist" style="margin-top:16px">Fechar</button>
+    </div>
+
+    <script type="module" src="/js/pages/admin/maintenance.js"></script>
+</body>
+</html>

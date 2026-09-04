@@ -105,7 +105,7 @@ async function renderStartFlow() {
     els.vehicleSelect.value = driver.defaultVehicleId;
   }
 
-  // Segundo condutor / copiloto (opcional, só registro)
+  // APE (opcional, só registro)
   try {
     const drivers = await listDrivers();
     const others = drivers.filter((d) => d.id !== driver.id && d.active);

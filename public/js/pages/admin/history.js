@@ -88,7 +88,7 @@ function renderTrips(trips) {
           <div>
             <strong>${escapeHtml(t.driverName || '—')}</strong>
             <p class="list-sub">${escapeHtml(t.vehicleModel || '')} · ${escapeHtml(t.vehiclePlate || '')}</p>
-            ${t.secondDriverName ? `<p class="list-sub">Copiloto: ${escapeHtml(t.secondDriverName)}</p>` : ''}
+            ${t.secondDriverName ? `<p class="list-sub">APE: ${escapeHtml(t.secondDriverName)}</p>` : ''}
           </div>
           <div class="trip-badges">
             ${t.isTest ? '<span class="badge badge-warning">TESTE</span>' : ''}

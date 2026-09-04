@@ -14,6 +14,10 @@ export const STOP_TYPES = ['escritório', 'fábrica', 'loja', 'shopping', 'resta
 
 export const EXPENSE_TYPES = ['refeição', 'água/lanche', 'pedágio', 'combustível', 'outro'];
 
+export const MAINTENANCE_TYPES = [
+  'revisão', 'troca de óleo', 'pneus', 'freios', 'suspensão', 'elétrica', 'outro'
+];
+
 export const EXPENSE_TYPE_ICONS = {
   'refeição': '🍽️',
   'água/lanche': '🥤',
@@ -118,6 +122,45 @@ export function timeValueToDate(hhmm) {
 export function todayISO() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/* ── Status de revisão dos veículos ── */
+
+export const REVISION_SOON_KM = 1000;
+export const REVISION_SOON_DAYS = 15;
+
+export const REVISION_STATUS_META = {
+  none:    { label: 'Sem alvo', cls: 'badge-muted' },
+  ok:      { label: 'Em dia',   cls: 'badge-accent' },
+  soon:    { label: 'Vencendo', cls: 'badge-warning' },
+  overdue: { label: 'Vencida',  cls: 'badge-danger' }
+};
+
+// 'none' | 'ok' | 'soon' | 'overdue' — compara o alvo do veículo
+// (nextRevisionKm/nextRevisionDate) com o KM atual (pode ser null) e hoje.
+export function revisionStatus(vehicle, currentKm) {
+  const nk = vehicle.nextRevisionKm ?? null;
+  const nd = vehicle.nextRevisionDate || null;
+  if (nk == null && !nd) return 'none';
+
+  const today = todayISO();
+  let overdue = false;
+  let soon = false;
+
+  if (nk != null && currentKm != null) {
+    const diff = nk - currentKm;
+    if (diff <= 0) overdue = true;
+    else if (diff <= REVISION_SOON_KM) soon = true;
+  }
+  if (nd) {
+    if (nd <= today) {
+      overdue = true;
+    } else {
+      const days = Math.ceil((new Date(nd + 'T00:00') - new Date(today + 'T00:00')) / 86400000);
+      if (days <= REVISION_SOON_DAYS) soon = true;
+    }
+  }
+  return overdue ? 'overdue' : soon ? 'soon' : 'ok';
 }
 
 export function escapeHtml(str) {

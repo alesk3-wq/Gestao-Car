@@ -4,11 +4,14 @@
 import { requireAuth } from '/js/auth.js';
 import {
   listAllTrips, createTestTrip, deleteTrip, updateTrip,
-  listDrivers, listVehicles, listDamagesByTrip, deleteDamage
+  listDrivers, listVehicles, listDamagesByTrip, deleteDamage,
+  createTestVehicle, deleteVehicle, updateVehicle,
+  createMaintenance, listMaintenanceByVehicle, deleteMaintenance
 } from '/js/db.js';
 import { deletePhoto } from '/js/storage.js';
 import {
-  FUEL_LEVELS, STOP_TYPES, EXPENSE_TYPES,
+  FUEL_LEVELS, STOP_TYPES, EXPENSE_TYPES, MAINTENANCE_TYPES,
+  REVISION_STATUS_META, revisionStatus,
   uuid, escapeHtml, formatDate, formatCurrency, showToast, registerServiceWorker
 } from '/js/utils.js';
 
@@ -16,7 +19,7 @@ const SUPERADMIN_EMAIL = 'alesk3@gmail.com';
 
 registerServiceWorker();
 
-const { user } = await requireAuth();
+const { user, driver } = await requireAuth();
 if (user.email !== SUPERADMIN_EMAIL) {
   window.location.replace('/pages/home.html');
   throw new Error('not-superadmin'); // aborta o resto do módulo
@@ -27,13 +30,24 @@ document.getElementById('content').style.display = 'block';
 
 document.getElementById('btnSeed').addEventListener('click', seed);
 document.getElementById('btnDeleteAllTest').addEventListener('click', deleteAllTest);
+document.getElementById('btnSeedMaintenance').addEventListener('click', seedMaintenance);
+document.getElementById('btnDeleteAllTestVehicles').addEventListener('click', deleteAllTestVehicles);
 
 let allTrips = [];
+let testVehicles = [];
 await refresh();
 
 async function refresh() {
   allTrips = await listAllTrips();
   renderTrips();
+  await refreshVehicles();
+}
+
+async function refreshVehicles() {
+  const vehicles = await listVehicles();
+  // Veículo de teste nunca tem turno, então não tem KM atual — status usa só a data alvo.
+  testVehicles = vehicles.filter((v) => v.isTest).map((v) => ({ vehicle: v, currentKm: null }));
+  renderTestVehicles();
 }
 
 /* ── Semear turnos de teste ── */
@@ -232,5 +246,171 @@ async function deleteAllTest() {
   } finally {
     btn.disabled = false;
     btn.textContent = 'Apagar todos os de teste';
+  }
+}
+
+/* ── Semear veículos de teste (revisões) ── */
+// Cria 3 veículos isTest:true + active:false (nunca aparecem pro condutor
+// escolher na Home) e uma revisão de teste em cada um, um pra cada status
+// possível (vencida / vencendo / em dia), pra testar a tela Revisões sem
+// mexer na frota real.
+
+function daysFromNow(n) {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return d;
+}
+
+async function seedMaintenance() {
+  const btn = document.getElementById('btnSeedMaintenance');
+  btn.disabled = true;
+  btn.textContent = 'Criando...';
+
+  const scenarios = ['overdue', 'soon', 'ok'];
+  const models = ['Toyota Corolla', 'Chevrolet Onix', 'VW Gol', 'Fiat Toro', 'Renault Kwid'];
+
+  try {
+    for (let i = 0; i < scenarios.length; i++) {
+      const model = pick(models);
+      const plate = `TESTE-${1000 + i}`;
+
+      const vehicleRef = await createTestVehicle({
+        model,
+        plate,
+        fleetNumber: `TESTE-FROTA-${i + 1}`
+      });
+      const vehicleId = vehicleRef.id;
+
+      const km = rnd(10000, 60000);
+      const date = dateISO(daysFromNow(-rnd(30, 180)));
+
+      let nextRevisionKm;
+      let nextRevisionDate;
+      if (scenarios[i] === 'overdue') {
+        nextRevisionKm = km - rnd(100, 2000);
+        nextRevisionDate = dateISO(daysFromNow(-rnd(1, 30)));
+      } else if (scenarios[i] === 'soon') {
+        nextRevisionKm = km + rnd(200, 900);
+        nextRevisionDate = dateISO(daysFromNow(rnd(1, 14)));
+      } else {
+        nextRevisionKm = km + rnd(3000, 8000);
+        nextRevisionDate = dateISO(daysFromNow(rnd(60, 200)));
+      }
+
+      await createMaintenance({
+        vehicleId,
+        vehiclePlate: plate,
+        vehicleModel: model,
+        date,
+        km,
+        type: pick(MAINTENANCE_TYPES),
+        description: 'Revisão de teste',
+        cost: rnd(150, 900),
+        nextRevisionKm,
+        nextRevisionDate,
+        createdByName: driver.name,
+        isTest: true
+      });
+
+      await updateVehicle(vehicleId, {
+        nextRevisionKm,
+        nextRevisionDate,
+        lastRevisionKm: km,
+        lastRevisionDate: date
+      });
+    }
+
+    showToast('3 veículos de teste criados (vencida / vencendo / em dia).', 'success');
+    await refreshVehicles();
+  } catch (error) {
+    console.error(error);
+    showToast('Erro ao criar veículos de teste.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Criar veículos de teste';
+  }
+}
+
+function renderTestVehicles() {
+  const list = document.getElementById('testVehiclesList');
+
+  if (testVehicles.length === 0) {
+    list.innerHTML = '<div class="empty-state">Nenhum veículo de teste.</div>';
+    return;
+  }
+
+  list.innerHTML = testVehicles.map(({ vehicle: v, currentKm }) => {
+    const meta = REVISION_STATUS_META[revisionStatus(v, currentKm)];
+    const next = [];
+    if (v.nextRevisionKm != null) next.push(`KM ${Number(v.nextRevisionKm).toLocaleString('pt-BR')}`);
+    if (v.nextRevisionDate) next.push(formatDate(v.nextRevisionDate));
+    const last = v.lastRevisionDate
+      ? `${formatDate(v.lastRevisionDate)} · ${Number(v.lastRevisionKm).toLocaleString('pt-BR')} km`
+      : '—';
+
+    return `
+      <div class="card rev-card" data-id="${v.id}">
+        <div class="trip-head">
+          <div>
+            <strong>${escapeHtml(v.model)}</strong>
+            <p class="list-sub">${escapeHtml(v.plate)}</p>
+          </div>
+          <span class="badge ${meta.cls}">${meta.label}</span>
+        </div>
+        <div class="trip-detail">
+          <div>Última revisão<strong>${last}</strong></div>
+          <div>Próxima<strong>${escapeHtml(next.join(' · ') || 'sem alvo')}</strong></div>
+        </div>
+        <div class="dev-row-actions">
+          <button type="button" class="btn btn-danger btn-sm btn-delete-vehicle">Apagar</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  list.querySelectorAll('.rev-card').forEach((card) => {
+    const id = card.dataset.id;
+    card.querySelector('.btn-delete-vehicle').addEventListener('click', async () => {
+      const v = testVehicles.find((r) => r.vehicle.id === id).vehicle;
+      if (!confirm(`Apagar o veículo de teste ${v.plate}? Isso também apaga as revisões dele.`)) return;
+      try {
+        await removeVehicleCascade(id);
+        showToast('Veículo de teste apagado.', 'success');
+        await refreshVehicles();
+      } catch (error) {
+        console.error(error);
+        showToast('Erro ao apagar.', 'error');
+      }
+    });
+  });
+}
+
+async function removeVehicleCascade(vehicleId) {
+  const records = await listMaintenanceByVehicle(vehicleId);
+  for (const r of records) await deleteMaintenance(r.id);
+  await deleteVehicle(vehicleId);
+}
+
+async function deleteAllTestVehicles() {
+  if (testVehicles.length === 0) {
+    showToast('Nenhum veículo de teste pra apagar.', '');
+    return;
+  }
+  if (!confirm(`Apagar ${testVehicles.length} veículos de teste (e revisões deles)?`)) return;
+
+  const btn = document.getElementById('btnDeleteAllTestVehicles');
+  btn.disabled = true;
+  btn.textContent = 'Apagando...';
+
+  try {
+    for (const { vehicle } of testVehicles) await removeVehicleCascade(vehicle.id);
+    showToast('Veículos de teste apagados.', 'success');
+    await refreshVehicles();
+  } catch (error) {
+    console.error(error);
+    showToast('Erro ao apagar alguns veículos.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Apagar todos';
   }
 }

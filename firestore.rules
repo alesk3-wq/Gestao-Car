@@ -39,6 +39,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Revisões / manutenção: qualquer logado lê; só admin registra.
+    match /maintenance/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
     // Turnos: condutor cria/edita os próprios enquanto abertos.
     // Turno fechado é imutável (auditoria) — nem admin edita/deleta.
     match /trips/{tripId} {

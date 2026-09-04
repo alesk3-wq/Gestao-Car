@@ -57,6 +57,7 @@ projeto/
     │       ├── drivers.html          # Cadastro de condutores
     │       ├── history.html          # Histórico: lista de cards-resumo + totais do filtro
     │       ├── trip.html             # Relatório completo de um turno (?id=) + Exportar PDF (print)
+    │       ├── maintenance.html      # Revisões: status por veículo, registrar revisão, próxima revisão
     │       └── dev.html              # Manutenção: semear/apagar turnos de teste (só superadmin)
     ├── css/
     │   ├── design-system.css         # Variáveis CSS (cores, tipografia, spacing) — ver seção 5
@@ -90,6 +91,7 @@ projeto/
     │           ├── drivers.js
     │           ├── history.js
     │           ├── trip.js           # Relatório de um turno + window.print()
+    │           ├── maintenance.js    # Tela de revisões (status, registrar, histórico)
     │           └── dev.js            # Semear/apagar turnos de teste (guard por e-mail)
     └── assets/
         ├── icons/                    # Ícones PWA (192px, 512px) e favicon
@@ -236,6 +238,31 @@ Referência estética: apps tipo Uber Driver / iFood Entregador — fundo preto,
   plate: "ABC-1D23",
   fleetNumber: "FROTA-01",
   active: true,
+  nextRevisionKm: 55230 | null,        // alvo da próxima revisão (KM) — definido na tela Revisões
+  nextRevisionDate: "2027-03-01" | null,// alvo da próxima revisão (data)
+  revisionNote: "..." | null,
+  lastRevisionKm: 45230 | null,        // cache do último registro em `maintenance`
+  lastRevisionDate: "2026-09-01" | null,
+  isTest: true | undefined,            // veículo fictício criado na tela dev (sempre active:false)
+  createdAt: timestamp
+}
+```
+
+### Coleção `maintenance` (revisões / manutenção preventiva)
+```
+{
+  id: "auto",
+  vehicleId: "veh_456",
+  vehiclePlate: "ABC-1D23",            // desnormalizado
+  vehicleModel: "Toyota Corolla",
+  date: "2026-09-01",                  // quando a revisão foi feita
+  km: 45230,                           // odômetro na revisão
+  type: "revisão" | "troca de óleo" | "pneus" | "freios" | "suspensão" | "elétrica" | "outro",
+  description: "revisão de 40.000 km",
+  cost: 350.00 | null,
+  nextRevisionKm: 55230 | null,        // alvo definido nesta revisão (copiado pro doc do veículo)
+  nextRevisionDate: "2027-03-01" | null,
+  createdByName: "Gestor X",
   createdAt: timestamp
 }
 ```
@@ -246,7 +273,7 @@ Referência estética: apps tipo Uber Driver / iFood Entregador — fundo preto,
   id: "auto",
   driverId: "drv_123",
   driverName: "João Silva",           // desnormalizado para facilitar listagem
-  secondDriverId: "drv_456" | null,   // segundo condutor/copiloto — só registro, não loga nem opera o app
+  secondDriverId: "drv_456" | null,   // APE (rótulo na UI é "APE") — só registro, não loga nem opera o app
   secondDriverName: "Maria Souza" | null,
   vehicleId: "veh_456",
   vehiclePlate: "ABC-1D23",           // desnormalizado (+ vehicleModel). Trocável na tela Veículo enquanto o turno está aberto — a troca zera kmStart/kmEnd/fuelStart
@@ -343,7 +370,7 @@ Fluxo:
 ### 6.5 Home do Condutor (`pages/home.html`)
 - Saudação com nome do condutor (auto-preenchido do Auth)
 - Card do veículo atribuído (se houver `defaultVehicleId`) ou dropdown pra escolher
-- Card opcional **"Segundo condutor / copiloto"**: dropdown com os demais condutores ativos (`listDrivers()`, excluindo o próprio). Puro registro — grava `secondDriverId`/`secondDriverName` no `trip`, o copiloto não loga nem interage com o app. Relevante pra plantões longos (>24h) onde há dois condutores no mesmo turno.
+- Card opcional **"APE"** (sigla interna da empresa pro segundo ocupante do turno): dropdown com os demais condutores ativos (`listDrivers()`, excluindo o próprio). Puro registro — grava `secondDriverId`/`secondDriverName` no `trip` (nomes de campo mantidos; só o rótulo da UI é "APE"). O APE não loga nem interage com o app. Relevante pra plantões longos (>24h).
 - Botão grande **"Iniciar Turno"** (cria `trip` com `status: "open"`) — sticky no bottom, acima do nav
 - Se já houver turno aberto: card grande do turno em andamento + botão **"Continuar Turno"**. O card tem um campo **"Início do turno"** (`datetime-local`) editável — salva na hora (`updateTrip`) e recalcula a Duração. Pro caso comum do condutor abrir o app atrasado e precisar recuar o horário. Não aceita horário no futuro.
 - Checkbox **"Este é um turno de teste"**: só aparece pra conta superadmin (`alesk3@gmail.com`); marca `isTest: true` no `trip` já na criação.
@@ -403,7 +430,8 @@ Três sub-abas (tabs no topo, controladas por JS — não são páginas separada
   - Filtro por veículo/condutor **+ período**: o `listTrips` de `db.js` manda só os `where()` de igualdade pro Firestore e filtra o intervalo de datas no cliente — igualdade + range em campos diferentes exigiria índice composto (ver seção 11).
 - `pages/admin/trip.html?id=<tripId>`: **relatório completo de um turno**. Cabeçalho, grid de indicadores, lista completa de paradas, despesas (com lightbox de recibo) e avarias do turno (`listDamagesByTrip`, com lightbox). Botão **"Exportar PDF"** = `window.print()` + `css/pages/report.css` (`@media print`: fundo branco, sem cromo de app, cards sem quebra, título "Relatório de Turno — placa — data"). Sem dependência de PDF.
   - **Card "Ajustar horários (gestor)"** (`.no-print`): `datetime-local` de início e fim, editáveis **mesmo em turno fechado** — é o único ajuste pós-fechamento (as regras só liberam o admin pra `startTime`/`endTime`). Valida fim > início; ao salvar, atualiza cabeçalho e tile de Duração.
-- `pages/admin/dev.html`: tela de manutenção — ver seção 12.
+- `pages/admin/maintenance.html` — **Revisões**: um card por veículo com KM atual (do `kmEnd` do último turno fechado via `getLastClosedTrip`), **próxima revisão** (alvo de KM e/ou data, guardado no doc do veículo) e badge de status: **Em dia** (verde) · **Vencendo** (amarelo, faltando ≤ 1.000 km ou ≤ 15 dias) · **Vencida** (vermelho, KM ou data já passou) · **Sem alvo**. Faixa de totais no topo. Sheet "Registrar revisão" grava em `maintenance` e atualiza `nextRevision*`/`lastRevision*` no veículo. Sheet "Histórico" lista os registros de `maintenance` do veículo. Sem push (o aviso é o status colorido).
+- `pages/admin/dev.html`: tela de manutenção de dados de teste — ver seção 12.
 
 ## 7. Features Extras Combinadas
 
@@ -434,6 +462,7 @@ Três sub-abas (tabs no topo, controladas por JS — não são páginas separada
 - Condutor lê/escreve seus próprios `trips` **enquanto abertos**. Turnos com `status == 'closed'` ficam legíveis por **qualquer condutor logado** (não só o dono) — necessário pro handoff de KM entre turnos de condutores diferentes.
 - Condutor lê e cria `damages` (qualquer condutor logado lê todas, pro handoff de avarias do veículo); só admin edita/resolve.
 - Condutor lê `vehicles` e `drivers` mas não escreve (exceto o próprio perfil, sem poder trocar `role` sozinho).
+- `maintenance` (revisões): qualquer logado lê; só admin escreve.
 - Admin lê tudo. `update` de `trips` pelo admin: **só** `startTime`/`endTime`
   (`request.resource.data.diff(resource.data).affectedKeys().hasOnly(['startTime','endTime'])`),
   inclusive em turno fechado — é o ajuste de horário do gestor no `trip.html`. Todo o resto do turno segue imutável pós-fechamento.
@@ -487,3 +516,5 @@ Tela de manutenção **fora do menu**, só pra conta `alesk3@gmail.com` (guard: 
 - **Lista de TODOS os turnos** (`listAllTrips()`), não só os de teste — porque os condutores também criam turnos reais testando. Cada linha: badge TESTE, botão **Marcar/Desmarcar teste** (`updateTrip({ isTest })`), botão **Apagar** (cascateia: acha `damages` do `tripId` → `deletePhoto()` de cada `photoUrl` no Storage → `deleteDamage()` → `deleteTrip()`), e botão **"Apagar todos os de teste"**.
 - Helpers novos: `db.js` → `createTestTrip`, `listAllTrips`, `deleteTrip`, `deleteDamage`; `storage.js` → `deletePhoto(url)` (aceita download URL, ignora "object-not-found").
 - Turnos `isTest` **aparecem** no Histórico/relatórios normais (com selinho TESTE) e alimentam o handoff — some tudo quando são apagados.
+
+**Dados de teste pra Revisões**: botão "Criar veículos de teste" cria **3 veículos fictícios** (`createTestVehicle()` em `db.js` — `isTest:true` **e** `active:false`, então nunca aparecem pro condutor escolher na Home) com placa `TESTE-100x`, um de cada status (**vencida**/**vencendo**/**em dia**) — usa o mesmo `revisionStatus()` de `utils.js` que a tela real usa, então o preview bate com o que aparece em `maintenance.html`. Cada um ganha um registro em `maintenance` (`isTest:true`) e o alvo correspondente gravado no veículo. Lista separada "Veículos de teste (revisões)" com apagar individual (cascateia: apaga os registros de `maintenance` do veículo → apaga o veículo) e "Apagar todos". Como são veículos de teste (não turnos), a lógica não mexe em `trips`/`damages` — totalmente isolado da frota real.
