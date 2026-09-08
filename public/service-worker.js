@@ -4,7 +4,7 @@
 // sozinho no próximo carregamento, sem precisar limpar cache manualmente),
 // network-first pra HTML.
 
-const CACHE_NAME = 'frota-app-v9';
+const CACHE_NAME = 'frota-app-v10';
 
 const PRECACHE = [
   '/',

@@ -9,12 +9,31 @@ import {
 
 registerServiceWorker();
 
-document.getElementById('btnPrint').addEventListener('click', () => window.print());
-document.getElementById('btnPrintBottom').addEventListener('click', () => window.print());
+// iOS abre o PWA instalado (ícone na tela de início) em modo "standalone", e
+// nesse modo o window.print() do Safari simplesmente não faz nada. Detecta
+// isso e abre o relatório numa aba real do Safari com ?print=1 — lá o print
+// funciona e dispara sozinho no carregamento.
+const iosStandalone = window.navigator.standalone === true;
+const params = new URLSearchParams(location.search);
+const wantsPrint = params.get('print') === '1';
+
+function exportPdf() {
+  if (iosStandalone) {
+    const url = new URL(location.href);
+    url.searchParams.set('print', '1');
+    const win = window.open(url.toString(), '_blank');
+    if (!win) showToast('Abra este relatório no Safari para exportar o PDF.', 'error');
+  } else {
+    window.print();
+  }
+}
+
+document.getElementById('btnPrint').addEventListener('click', exportPdf);
+document.getElementById('btnPrintBottom').addEventListener('click', exportPdf);
 
 await requireAuth({ adminOnly: true });
 
-const id = new URLSearchParams(location.search).get('id');
+const id = params.get('id');
 const trip = id ? await getTrip(id) : null;
 
 document.getElementById('loading').style.display = 'none';
@@ -24,6 +43,27 @@ if (!trip) {
 } else {
   document.getElementById('content').style.display = 'block';
   await render();
+
+  if (wantsPrint) {
+    if (iosStandalone) {
+      showToast('Abra o relatório pelo Safari para exportar o PDF.', 'error');
+    } else {
+      await waitForImages(3000);
+      history.replaceState(null, '', `${location.pathname}?id=${encodeURIComponent(id)}`);
+      setTimeout(() => window.print(), 150);
+    }
+  }
+}
+
+// Espera as imagens (fotos de recibo/avaria) carregarem antes de imprimir,
+// com teto de tempo pra não travar se alguma falhar.
+function waitForImages(timeoutMs) {
+  const pending = [...document.images].filter((im) => !im.complete);
+  if (pending.length === 0) return Promise.resolve();
+  return Promise.race([
+    Promise.all(pending.map((im) => new Promise((res) => { im.onload = im.onerror = res; }))),
+    new Promise((res) => setTimeout(res, timeoutMs))
+  ]);
 }
 
 // Cada seção isolada: uma falha (ex.: avarias) não pode zerar o resto (CLAUDE.md).
