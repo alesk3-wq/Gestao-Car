@@ -9,27 +9,41 @@ import {
 
 registerServiceWorker();
 
-// iOS abre o PWA instalado (ícone na tela de início) em modo "standalone", e
-// nesse modo o window.print() do Safari simplesmente não faz nada. Detecta
-// isso e abre o relatório numa aba real do Safari com ?print=1 — lá o print
-// funciona e dispara sozinho no carregamento.
+// iOS abre o PWA instalado (ícone na tela de início) em modo "standalone".
+// Ali o window.print() do Safari não faz nada — e window.open() via script
+// também é bloqueado boa parte das vezes (foi o que gerou o aviso "abra no
+// Safari": o window.open tinha falhado silenciosamente). A única saída
+// confiável do modo standalone no iOS é um <a target="_blank"> de verdade,
+// tocado pelo usuário — não uma chamada de script. Então, nesse caso, os
+// botões viram links reais pro próprio relatório com ?print=1, que dispara
+// a impressão sozinho ao carregar (já fora do modo standalone).
 const iosStandalone = window.navigator.standalone === true;
 const params = new URLSearchParams(location.search);
 const wantsPrint = params.get('print') === '1';
 
-function exportPdf() {
-  if (iosStandalone) {
-    const url = new URL(location.href);
-    url.searchParams.set('print', '1');
-    const win = window.open(url.toString(), '_blank');
-    if (!win) showToast('Abra este relatório no Safari para exportar o PDF.', 'error');
-  } else {
-    window.print();
-  }
+function printUrl() {
+  const url = new URL(location.href);
+  url.searchParams.set('print', '1');
+  return url.toString();
 }
 
-document.getElementById('btnPrint').addEventListener('click', exportPdf);
-document.getElementById('btnPrintBottom').addEventListener('click', exportPdf);
+function turnIntoPrintLink(btn) {
+  const a = document.createElement('a');
+  for (const attr of btn.attributes) a.setAttribute(attr.name, attr.value);
+  a.innerHTML = btn.innerHTML;
+  a.href = printUrl();
+  a.target = '_blank';
+  a.rel = 'noopener';
+  btn.replaceWith(a);
+}
+
+if (iosStandalone) {
+  turnIntoPrintLink(document.getElementById('btnPrint'));
+  turnIntoPrintLink(document.getElementById('btnPrintBottom'));
+} else {
+  document.getElementById('btnPrint').addEventListener('click', () => window.print());
+  document.getElementById('btnPrintBottom').addEventListener('click', () => window.print());
+}
 
 await requireAuth({ adminOnly: true });
 
@@ -46,7 +60,9 @@ if (!trip) {
 
   if (wantsPrint) {
     if (iosStandalone) {
-      showToast('Abra o relatório pelo Safari para exportar o PDF.', 'error');
+      // Não deveria acontecer (o link real deveria ter tirado do standalone),
+      // mas se acontecer, avisa em vez de falhar calado.
+      showToast('Abra este relatório num navegador (fora do app) para exportar o PDF.', 'error');
     } else {
       await waitForImages(3000);
       history.replaceState(null, '', `${location.pathname}?id=${encodeURIComponent(id)}`);
