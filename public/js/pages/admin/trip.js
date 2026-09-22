@@ -10,13 +10,13 @@ import {
 registerServiceWorker();
 
 // iOS abre o PWA instalado (ícone na tela de início) em modo "standalone".
-// Ali o window.print() do Safari não faz nada — e window.open() via script
-// também é bloqueado boa parte das vezes (foi o que gerou o aviso "abra no
-// Safari": o window.open tinha falhado silenciosamente). A única saída
-// confiável do modo standalone no iOS é um <a target="_blank"> de verdade,
-// tocado pelo usuário — não uma chamada de script. Então, nesse caso, os
-// botões viram links reais pro próprio relatório com ?print=1, que dispara
-// a impressão sozinho ao carregar (já fora do modo standalone).
+// Ali o window.print() não faz nada, window.open() via script é bloqueado
+// boa parte das vezes, e nem um <a target="_blank"> normal escapa — porque
+// a URL é do mesmo domínio do app instalado, o iOS reconhece que ela está
+// dentro do "escopo" dele e mantém tudo no shell standalone. O truque que
+// funciona: prefixar a URL com "x-safari-" força um handoff explícito pro
+// Safari de verdade (mesmo esquema usado por tel:/mailto: pra abrir outro
+// app), ignorando esse reconhecimento de escopo.
 const iosStandalone = window.navigator.standalone === true;
 const params = new URLSearchParams(location.search);
 const wantsPrint = params.get('print') === '1';
@@ -31,8 +31,7 @@ function turnIntoPrintLink(btn) {
   const a = document.createElement('a');
   for (const attr of btn.attributes) a.setAttribute(attr.name, attr.value);
   a.innerHTML = btn.innerHTML;
-  a.href = printUrl();
-  a.target = '_blank';
+  a.href = `x-safari-${printUrl()}`;
   a.rel = 'noopener';
   btn.replaceWith(a);
 }
