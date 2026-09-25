@@ -1,7 +1,7 @@
 import { requireAuth, logout } from '/js/auth.js';
 import { listTrips, listAllDamages, listAllMaintenance, listVehicles } from '/js/db.js';
 import {
-  escapeHtml, formatCurrency, showToast, registerServiceWorker, initTabs
+  escapeHtml, formatCurrency, formatDate, showToast, registerServiceWorker, initTabs
 } from '/js/utils.js';
 
 registerServiceWorker();
@@ -10,12 +10,70 @@ document.getElementById('btnLogout').addEventListener('click', logout);
 await requireAuth({ adminOnly: true });
 initTabs();
 
+// iOS PWA instalado (standalone): window.print() e window.open()/<a target="_blank">
+// não escapam do modo standalone (ver trip.js). O que funciona é um link real
+// com o esquema x-safari-, então os botões viram link nesse caso. Como o
+// período pode mudar sem recarregar a página, o href é atualizado a cada
+// refresh() — não dá pra fixar uma vez só como no relatório de turno.
+const iosStandalone = window.navigator.standalone === true;
+let printLinks = [];
+
+function printUrl() {
+  const { dateFrom, dateTo } = getFilterRange();
+  const url = new URL(`${location.origin}${location.pathname}`);
+  url.searchParams.set('from', dateFrom);
+  url.searchParams.set('to', dateTo);
+  url.searchParams.set('print', '1');
+  return url.toString();
+}
+
+function turnIntoPrintLink(btn) {
+  const a = document.createElement('a');
+  for (const attr of btn.attributes) a.setAttribute(attr.name, attr.value);
+  a.innerHTML = btn.innerHTML;
+  a.rel = 'noopener';
+  btn.replaceWith(a);
+  return a;
+}
+
+function updatePrintLinks() {
+  if (!iosStandalone) return;
+  const href = `x-safari-${printUrl()}`;
+  printLinks.forEach((a) => { a.href = href; });
+}
+
+if (iosStandalone) {
+  printLinks = [
+    turnIntoPrintLink(document.getElementById('btnPrint')),
+    turnIntoPrintLink(document.getElementById('btnPrintBottom'))
+  ];
+} else {
+  document.getElementById('btnPrint').addEventListener('click', () => window.print());
+  document.getElementById('btnPrintBottom').addEventListener('click', () => window.print());
+}
+
 document.getElementById('btnFilter').addEventListener('click', () => refresh(getFilterRange()));
 document.getElementById('btnThisMonth').addEventListener('click', () => applyRange(monthRange(0)));
 document.getElementById('btnLastMonth').addEventListener('click', () => applyRange(monthRange(-1)));
 document.getElementById('btnThisYear').addEventListener('click', () => applyRange(yearRange()));
 
-applyRange(monthRange(0)); // default: mês corrente
+// Período inicial: da URL (handoff do print no iOS) ou mês corrente.
+const initialParams = new URLSearchParams(location.search);
+const wantsPrint = initialParams.get('print') === '1';
+const initialRange = (initialParams.get('from') && initialParams.get('to'))
+  ? { dateFrom: initialParams.get('from'), dateTo: initialParams.get('to') }
+  : monthRange(0);
+
+await applyRange(initialRange);
+
+if (wantsPrint) {
+  if (iosStandalone) {
+    showToast('Abra este relatório num navegador (fora do app) para exportar o PDF.', 'error');
+  } else {
+    history.replaceState(null, '', `${location.pathname}?from=${encodeURIComponent(initialRange.dateFrom)}&to=${encodeURIComponent(initialRange.dateTo)}`);
+    setTimeout(() => window.print(), 150);
+  }
+}
 
 /* ── Período ── */
 
@@ -39,7 +97,7 @@ function yearRange() {
 function applyRange({ dateFrom, dateTo }) {
   document.getElementById('repFrom').value = dateFrom;
   document.getElementById('repTo').value = dateTo;
-  refresh({ dateFrom, dateTo });
+  return refresh({ dateFrom, dateTo });
 }
 
 function getFilterRange() {
@@ -85,6 +143,9 @@ async function refresh({ dateFrom, dateTo }) {
 
     renderFinanceiro(trips, maint);
     renderOperacional(trips, damagesAllTime, vehicleLabel, dateFrom, dateTo);
+    document.getElementById('printTitle').textContent =
+      `Relatório Gerencial — ${formatDate(dateFrom)} a ${formatDate(dateTo)}`;
+    updatePrintLinks();
   } catch (error) {
     console.error(error);
     showToast('Erro ao carregar relatório.', 'error');

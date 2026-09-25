@@ -17,8 +17,19 @@
   .spinner,
   .lightbox-backdrop,
   .toast,
+  .tabs,
   .no-print {
     display: none !important;
+  }
+
+  /* Telas com abas (ex.: Relatórios): imprime todos os painéis empilhados,
+     não só o que estava ativo na tela. */
+  .tab-panel {
+    display: block !important;
+  }
+
+  .tab-panel + .tab-panel {
+    page-break-before: always;
   }
 
   .page {

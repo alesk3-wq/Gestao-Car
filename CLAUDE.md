@@ -439,6 +439,7 @@ Três sub-abas (tabs no topo, controladas por JS — não são páginas separada
   - **Financeiro**: gasto total, custo de manutenção, **custo/km** (= despesas + manutenção do período ÷ KM rodado) e KM total; quebras por tipo de despesa, por veículo e por condutor; KM e gasto de manutenção por veículo.
   - **Operacional**: turnos no período, avarias novas/resolvidas no período, combustível baixo no retorno; avarias em aberto por veículo (total atual da frota, não recortado pelo período); uso por condutor (turnos, horas, km).
   - Turnos/veículos/revisões `isTest` **sempre excluídos** dos números. Dados vêm de `listTrips` (com `max` alto pra não bater no teto de 100 pensado pro Histórico), `listAllDamages`/`listAllMaintenance` (novas em `db.js`, mesmo padrão de `listAllTrips`) — tudo agregado no cliente, sem índice novo.
+  - **Exportar PDF**: mesmo esquema do `trip.html` (`window.print()` + `report.css`; `x-safari-` no iOS PWA standalone). Diferença aqui: o período (De/Até) vai na URL (`?from=&to=&print=1`), porque a tela não tem um `id` fixo — é o que o handoff pro Safari usa pra reabrir com o mesmo filtro e reimprimir sozinho. `report.css` imprime as duas abas (Financeiro + Operacional) empilhadas, cada uma começando em página nova, mesmo só uma estando visível na tela.
 - `pages/admin/dev.html`: tela de manutenção de dados de teste — ver seção 12.
 
 ## 7. Features Extras Combinadas

@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/css/pages/admin.css">
     <link rel="stylesheet" href="/css/pages/summary.css">
+    <link rel="stylesheet" href="/css/pages/report.css">
 </head>
 <body>
     <header class="app-header">
@@ -22,6 +23,9 @@
         <a class="header-action" href="/pages/home.html" aria-label="Modo condutor">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>
         </a>
+        <button class="header-action" id="btnPrint" aria-label="Exportar PDF">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        </button>
         <button class="header-action" id="btnLogout" aria-label="Sair">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         </button>
@@ -36,7 +40,7 @@
             <a href="/pages/admin/reports.html" class="active">Relatórios</a>
         </nav>
 
-        <div class="card">
+        <div class="card no-print">
             <h3>Período</h3>
             <div class="period-shortcuts">
                 <button class="btn btn-secondary btn-sm" id="btnThisMonth">Este mês</button>
@@ -53,6 +57,8 @@
         <div class="spinner" id="loading"></div>
 
         <div id="content" style="display:none">
+            <div class="print-title" id="printTitle"></div>
+
             <div class="tabs section-gap">
                 <button class="tab active" data-tab="financeiro">Financeiro</button>
                 <button class="tab" data-tab="operacional">Operacional</button>
@@ -136,6 +142,8 @@
                     <div id="opDriverUsage" style="margin-top:8px"></div>
                 </div>
             </div>
+
+            <button class="btn btn-secondary" id="btnPrintBottom" style="margin-top:24px">Exportar PDF</button>
         </div>
     </main>
 
