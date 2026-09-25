@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Relatórios - SegAut-App</title>
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SegAut-App">
+    <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+    <link rel="icon" type="image/png" href="/assets/icons/favicon.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="stylesheet" href="/css/design-system.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/pages/admin.css">
+    <link rel="stylesheet" href="/css/pages/summary.css">
+</head>
+<body>
+    <header class="app-header">
+        <h1>Relatórios</h1>
+        <a class="header-action" href="/pages/home.html" aria-label="Modo condutor">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>
+        </a>
+        <button class="header-action" id="btnLogout" aria-label="Sair">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+    </header>
+
+    <main class="page" style="padding-bottom: 32px">
+        <nav class="admin-nav">
+            <a href="/pages/admin/history.html">Histórico</a>
+            <a href="/pages/admin/vehicles.html">Veículos</a>
+            <a href="/pages/admin/drivers.html">Condutores</a>
+            <a href="/pages/admin/maintenance.html">Revisões</a>
+            <a href="/pages/admin/reports.html" class="active">Relatórios</a>
+        </nav>
+
+        <div class="card">
+            <h3>Período</h3>
+            <div class="period-shortcuts">
+                <button class="btn btn-secondary btn-sm" id="btnThisMonth">Este mês</button>
+                <button class="btn btn-secondary btn-sm" id="btnLastMonth">Mês passado</button>
+                <button class="btn btn-secondary btn-sm" id="btnThisYear">Este ano</button>
+            </div>
+            <div class="filters" style="margin-bottom:0">
+                <input type="date" id="repFrom" aria-label="De">
+                <input type="date" id="repTo" aria-label="Até">
+                <button class="btn btn-primary btn-sm full" id="btnFilter" style="width:100%">Filtrar</button>
+            </div>
+        </div>
+
+        <div class="spinner" id="loading"></div>
+
+        <div id="content" style="display:none">
+            <div class="tabs section-gap">
+                <button class="tab active" data-tab="financeiro">Financeiro</button>
+                <button class="tab" data-tab="operacional">Operacional</button>
+            </div>
+
+            <!-- ── Financeiro ── -->
+            <div class="tab-panel active" id="panel-financeiro">
+                <div class="summary-grid section-gap">
+                    <div class="summary-tile">
+                        <div class="tile-label">Gasto total</div>
+                        <div class="tile-value" id="finTotalExpenses">—</div>
+                    </div>
+                    <div class="summary-tile">
+                        <div class="tile-label">Manutenção</div>
+                        <div class="tile-value" id="finMaintCost">—</div>
+                    </div>
+                    <div class="summary-tile">
+                        <div class="tile-label">Custo/km</div>
+                        <div class="tile-value" id="finCostPerKm">—</div>
+                    </div>
+                    <div class="summary-tile">
+                        <div class="tile-label">KM total</div>
+                        <div class="tile-value" id="finTotalKm">—</div>
+                    </div>
+                </div>
+
+                <div class="card section-gap">
+                    <h3>Gastos por tipo</h3>
+                    <div id="finByType" class="section-gap" style="margin-top:8px"></div>
+                </div>
+                <div class="card section-gap">
+                    <h3>Gastos por veículo</h3>
+                    <div id="finByVehicle" style="margin-top:8px"></div>
+                </div>
+                <div class="card section-gap">
+                    <h3>Gastos por condutor</h3>
+                    <div id="finByDriver" style="margin-top:8px"></div>
+                </div>
+                <div class="card section-gap">
+                    <h3>KM por veículo</h3>
+                    <div id="finKmByVehicle" style="margin-top:8px"></div>
+                </div>
+                <div class="card section-gap">
+                    <h3>Manutenção por veículo</h3>
+                    <div id="finMaintByVehicle" style="margin-top:8px"></div>
+                </div>
+            </div>
+
+            <!-- ── Operacional ── -->
+            <div class="tab-panel" id="panel-operacional">
+                <div class="summary-grid section-gap">
+                    <div class="summary-tile">
+                        <div class="tile-label">Turnos no período</div>
+                        <div class="tile-value" id="opTripsCount">—</div>
+                    </div>
+                    <div class="summary-tile">
+                        <div class="tile-label">Avarias novas</div>
+                        <div class="tile-value" id="opNewDamages">—</div>
+                    </div>
+                    <div class="summary-tile">
+                        <div class="tile-label">Resolvidas no período</div>
+                        <div class="tile-value" id="opResolvedDamages">—</div>
+                    </div>
+                    <div class="summary-tile">
+                        <div class="tile-label">Combustível baixo no retorno</div>
+                        <div class="tile-value" id="opLowFuel">—</div>
+                    </div>
+                </div>
+
+                <div class="card section-gap">
+                    <div class="card-row">
+                        <h3>Avarias em aberto por veículo</h3>
+                        <span class="badge badge-danger" id="opOpenDamages">—</span>
+                    </div>
+                    <p class="form-hint" style="margin:4px 0 8px">Total atual da frota — não é recortado pelo período do filtro.</p>
+                    <div id="opDamagesByVehicle"></div>
+                </div>
+
+                <div class="card section-gap">
+                    <h3>Uso por condutor</h3>
+                    <div id="opDriverUsage" style="margin-top:8px"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script type="module" src="/js/pages/admin/reports.js"></script>
+</body>
+</html>

@@ -103,6 +103,15 @@
   margin-top: 2px;
 }
 
+/* Tela Relatórios: atalhos de período */
+.period-shortcuts {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.period-shortcuts .btn { flex: 1; }
+
 .trip-badges {
   display: flex;
   flex-direction: column;
@@ -126,7 +135,8 @@
 .dev-row-actions .btn { flex: 1; }
 
 .trip-card .trip-detail,
-.rev-card .trip-detail {
+.rev-card .trip-detail,
+.report-row .trip-detail {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
@@ -136,7 +146,8 @@
 }
 
 .trip-card .trip-detail strong,
-.rev-card .trip-detail strong {
+.rev-card .trip-detail strong,
+.report-row .trip-detail strong {
   display: block;
   color: var(--text);
   font-size: 15px;

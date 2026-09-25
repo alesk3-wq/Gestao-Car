@@ -143,7 +143,7 @@ export async function getLastClosedTrip(vehicleId) {
 // (vários "==" em campos diferentes não exigem índice composto); o range de
 // datas é aplicado no cliente pra evitar o índice composto que igualdade +
 // range exigiria (ver CLAUDE.md seção 11). Sem orderBy na query — ordena aqui.
-export async function listTrips({ vehicleId = '', driverId = '', dateFrom = '', dateTo = '' } = {}) {
+export async function listTrips({ vehicleId = '', driverId = '', dateFrom = '', dateTo = '', max = 100 } = {}) {
   const parts = [collection(db, 'trips')];
   if (vehicleId) parts.push(where('vehicleId', '==', vehicleId));
   if (driverId) parts.push(where('driverId', '==', driverId));
@@ -151,7 +151,7 @@ export async function listTrips({ vehicleId = '', driverId = '', dateFrom = '', 
   return snapToList(snap)
     .filter((t) => (!dateFrom || (t.date || '') >= dateFrom) && (!dateTo || (t.date || '') <= dateTo))
     .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
-    .slice(0, 100);
+    .slice(0, max);
 }
 
 /* ── Manutenção / turnos de teste (só conta superadmin) ── */
@@ -213,12 +213,30 @@ export async function listDamagesByTrip(tripId) {
   return snapToList(snap);
 }
 
+// Todas as avarias (qualquer status), pra relatórios agregados. Ordena no cliente.
+export async function listAllDamages({ max = 2000 } = {}) {
+  const snap = await getDocs(collection(db, 'damages'));
+  return snapToList(snap)
+    .sort((a, b) => (b.reportedAt?.toMillis?.() ?? 0) - (a.reportedAt?.toMillis?.() ?? 0))
+    .slice(0, max);
+}
+
 export function updateDamage(damageId, data) {
   return updateDoc(doc(db, 'damages', damageId), data);
 }
 
 export function deleteDamage(damageId) {
   return deleteDoc(doc(db, 'damages', damageId));
+}
+
+/* ── Manutenção — leitura agregada (relatórios) ── */
+
+// Todas as revisões (qualquer veículo), pra relatórios agregados. Ordena no cliente.
+export async function listAllMaintenance({ max = 2000 } = {}) {
+  const snap = await getDocs(collection(db, 'maintenance'));
+  return snapToList(snap)
+    .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+    .slice(0, max);
 }
 
 export { serverTimestamp };

@@ -1,5 +1,5 @@
 import { requireAuth } from '/js/auth.js';
-import { getTrip, updateTrip, listDamagesByTrip } from '/js/db.js';
+import { getTrip, updateTrip, listDamagesByTrip, updateDamage, serverTimestamp } from '/js/db.js';
 import {
   FUEL_LABELS, DAMAGE_LOCATIONS, EXPENSE_TYPE_ICONS,
   escapeHtml, formatCurrency, formatDate, formatDateTime, formatTime, formatDuration,
@@ -281,6 +281,7 @@ async function renderDamages() {
         </div>
         <p class="damage-desc">${escapeHtml(d.description || '')}</p>
         <p class="damage-meta">${escapeHtml(d.driverName || '')} · ${formatDateTime(d.reportedAt)}</p>
+        ${d.resolved ? '' : `<button class="btn btn-secondary btn-sm btn-resolve" style="margin-top:10px">Marcar como resolvida</button>`}
       </div>
     </div>
   `).join('');
@@ -289,5 +290,21 @@ async function renderDamages() {
     card.querySelectorAll('.damage-thumb').forEach((img, photoIdx) => {
       img.addEventListener('click', () => openLightbox(damages[i].photoUrls, photoIdx));
     });
+
+    const btnResolve = card.querySelector('.btn-resolve');
+    if (btnResolve) {
+      btnResolve.addEventListener('click', async () => {
+        btnResolve.disabled = true;
+        try {
+          await updateDamage(damages[i].id, { resolved: true, resolvedAt: serverTimestamp() });
+          showToast('Avaria marcada como resolvida.', 'success');
+          await renderDamages();
+        } catch (e) {
+          console.error(e);
+          showToast('Erro ao atualizar.', 'error');
+          btnResolve.disabled = false;
+        }
+      });
+    }
   });
 }

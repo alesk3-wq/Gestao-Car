@@ -58,6 +58,7 @@ projeto/
     │       ├── history.html          # Histórico: lista de cards-resumo + totais do filtro
     │       ├── trip.html             # Relatório completo de um turno (?id=) + Exportar PDF (print)
     │       ├── maintenance.html      # Revisões: status por veículo, registrar revisão, próxima revisão
+    │       ├── reports.html          # Relatórios: financeiro + operacional, por período
     │       └── dev.html              # Manutenção: semear/apagar turnos de teste (só superadmin)
     ├── css/
     │   ├── design-system.css         # Variáveis CSS (cores, tipografia, spacing) — ver seção 5
@@ -92,6 +93,7 @@ projeto/
     │           ├── history.js
     │           ├── trip.js           # Relatório de um turno + window.print()
     │           ├── maintenance.js    # Tela de revisões (status, registrar, histórico)
+    │           ├── reports.js        # Relatórios agregados (financeiro + operacional)
     │           └── dev.js            # Semear/apagar turnos de teste (guard por e-mail)
     └── assets/
         ├── icons/                    # Ícones PWA (192px, 512px) e favicon
@@ -326,7 +328,8 @@ Referência estética: apps tipo Uber Driver / iFood Entregador — fundo preto,
   description: "Arranhão de ~10cm na porta dianteira esquerda",
   photoUrls: ["storage://...", "..."],
   reportedAt: timestamp,
-  resolved: false                       // gestor pode marcar como resolvida depois
+  resolved: false,                      // gestor marca como resolvida no relatório do turno (trip.html)
+  resolvedAt: timestamp | undefined     // gravado junto com resolved:true — usado no relatório (seção 6.10) pra "resolvidas no período"
 }
 ```
 
@@ -428,10 +431,14 @@ Três sub-abas (tabs no topo, controladas por JS — não são páginas separada
 - `pages/admin/drivers.html`: CRUD de condutores (email vira login no Auth). Aqui o admin pode pré-criar contas antes do motorista se cadastrar sozinho.
 - `pages/admin/history.html`: **lista** enxuta de turnos. Filtros (veículo, condutor, período) + faixa compacta de totais do filtro (turnos, KM total, despesas totais, avarias em aberto) + um **card-resumo por turno**, clicável → abre o relatório completo. Card com selinho **TESTE** quando `isTest`. Sem abas, sem despesas agregadas, sem timeline de avarias por veículo (foi removido daqui).
   - Filtro por veículo/condutor **+ período**: o `listTrips` de `db.js` manda só os `where()` de igualdade pro Firestore e filtra o intervalo de datas no cliente — igualdade + range em campos diferentes exigiria índice composto (ver seção 11).
-- `pages/admin/trip.html?id=<tripId>`: **relatório completo de um turno**. Cabeçalho, grid de indicadores, lista completa de paradas, despesas (com lightbox de recibo) e avarias do turno (`listDamagesByTrip`, com lightbox). Botão **"Exportar PDF"** = `window.print()` + `css/pages/report.css` (`@media print`: fundo branco, sem cromo de app, cards sem quebra, título "Relatório de Turno — placa — data"). Sem dependência de PDF — o iOS tem "imprimir em PDF" nativo (folha de impressão → pinch na prévia → Compartilhar → Salvar em Arquivos).
+- `pages/admin/trip.html?id=<tripId>`: **relatório completo de um turno**. Cabeçalho, grid de indicadores, lista completa de paradas, despesas (com lightbox de recibo) e avarias do turno (`listDamagesByTrip`, com lightbox) — cada avaria em aberto tem botão **"Marcar como resolvida"** (`updateDamage({ resolved: true, resolvedAt: serverTimestamp() })`; é o único lugar da UI onde isso acontece). Botão **"Exportar PDF"** = `window.print()` + `css/pages/report.css` (`@media print`: fundo branco, sem cromo de app, cards sem quebra, título "Relatório de Turno — placa — data"). Sem dependência de PDF — o iOS tem "imprimir em PDF" nativo (folha de impressão → pinch na prévia → Compartilhar → Salvar em Arquivos).
   - **iOS PWA**: no app instalado (modo standalone), `window.navigator.standalone === true`, e nem `window.print()`, nem `window.open()` via script, **nem** um `<a target="_blank">` normal escapam do modo standalone — porque a URL do relatório é do mesmo domínio do PWA instalado, e o iOS reconhece que ela está dentro do "escopo" do app e mantém tudo no shell standalone (já tentamos as duas primeiras, confirmado que falham). O que funciona: `turnIntoPrintLink()` em `trip.js` troca os botões de Exportar PDF por links reais com **`href="x-safari-<url>?print=1"`** — o prefixo `x-safari-` força um handoff explícito pro Safari de verdade (mesmo mecanismo usado por `tel:`/`mailto:` pra abrir outro app), ignorando o reconhecimento de escopo do PWA. A aba do Safari que abre detecta `?print=1` e dispara o `window.print()` sozinha, depois de esperar as imagens carregarem (teto de 3s). No Safari normal e no Android o `window.print()` roda direto, sem desvio. Truque não-documentado oficialmente pela Apple, mas amplamente relatado — se parar de funcionar em alguma versão futura do iOS, a alternativa é migrar pra geração de PDF client-side (ex.: `pdfmake`) com download de blob em vez de depender do fluxo de impressão do navegador.
   - **Card "Ajustar horários (gestor)"** (`.no-print`): `datetime-local` de início e fim, editáveis **mesmo em turno fechado** — é o único ajuste pós-fechamento (as regras só liberam o admin pra `startTime`/`endTime`). Valida fim > início; ao salvar, atualiza cabeçalho e tile de Duração.
 - `pages/admin/maintenance.html` — **Revisões**: um card por veículo com KM atual (do `kmEnd` do último turno fechado via `getLastClosedTrip`), **próxima revisão** (alvo de KM e/ou data, guardado no doc do veículo) e badge de status: **Em dia** (verde) · **Vencendo** (amarelo, faltando ≤ 1.000 km ou ≤ 15 dias) · **Vencida** (vermelho, KM ou data já passou) · **Sem alvo**. Faixa de totais no topo. Sheet "Registrar revisão" grava em `maintenance` e atualiza `nextRevision*`/`lastRevision*` no veículo. Sheet "Histórico" lista os registros de `maintenance` do veículo. Sem push (o aviso é o status colorido).
+- `pages/admin/reports.html` — **Relatórios**: agregados da frota por período (atalhos "Este mês"/"Mês passado"/"Este ano" + De/Até manual, default mês corrente). Duas abas:
+  - **Financeiro**: gasto total, custo de manutenção, **custo/km** (= despesas + manutenção do período ÷ KM rodado) e KM total; quebras por tipo de despesa, por veículo e por condutor; KM e gasto de manutenção por veículo.
+  - **Operacional**: turnos no período, avarias novas/resolvidas no período, combustível baixo no retorno; avarias em aberto por veículo (total atual da frota, não recortado pelo período); uso por condutor (turnos, horas, km).
+  - Turnos/veículos/revisões `isTest` **sempre excluídos** dos números. Dados vêm de `listTrips` (com `max` alto pra não bater no teto de 100 pensado pro Histórico), `listAllDamages`/`listAllMaintenance` (novas em `db.js`, mesmo padrão de `listAllTrips`) — tudo agregado no cliente, sem índice novo.
 - `pages/admin/dev.html`: tela de manutenção de dados de teste — ver seção 12.
 
 ## 7. Features Extras Combinadas
