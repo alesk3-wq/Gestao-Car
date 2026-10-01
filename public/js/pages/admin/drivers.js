@@ -24,6 +24,39 @@ function vehicleLabel(vehicleId) {
   return v ? `${v.model} (${v.plate})` : 'Sem veículo padrão';
 }
 
+// Cadastro novo nasce pendente (ver auth.js) — o gestor libera aqui.
+function pendingCard(d) {
+  return `
+    <div class="card pending-card" data-id="${d.id}">
+      <div class="card-row">
+        <strong>${escapeHtml(d.name || '—')}</strong>
+        <span class="badge badge-warning">Aguardando aprovação</span>
+      </div>
+      <p class="card-label" style="margin-top:4px">${escapeHtml(d.email || '')}</p>
+      <div class="dev-row-actions">
+        <button type="button" class="btn btn-primary btn-sm btn-approve">Aprovar</button>
+        <button type="button" class="btn btn-secondary btn-sm btn-reject">Recusar</button>
+      </div>
+    </div>
+  `;
+}
+
+async function decide(driverId, approved) {
+  const d = drivers.find((x) => x.id === driverId);
+  if (!approved && !confirm(`Recusar o acesso de ${d?.name || 'este condutor'}?`)) return;
+
+  try {
+    const data = { active: approved, pendingApproval: false };
+    await updateDriver(driverId, data);
+    Object.assign(d, data);
+    showToast(approved ? 'Condutor aprovado.' : 'Cadastro recusado.', approved ? 'success' : '');
+    renderList();
+  } catch (error) {
+    console.error(error);
+    showToast('Erro ao salvar. Tente novamente.', 'error');
+  }
+}
+
 function renderList() {
   const list = document.getElementById('driversList');
 
@@ -32,7 +65,11 @@ function renderList() {
     return;
   }
 
-  list.innerHTML = drivers.map((d) => `
+  // Pendentes primeiro — é o que exige ação do gestor.
+  const pending = drivers.filter((d) => d.pendingApproval);
+  const approved = drivers.filter((d) => !d.pendingApproval);
+
+  list.innerHTML = pending.map(pendingCard).join('') + approved.map((d) => `
     <div class="card list-card" data-id="${d.id}">
       <div class="list-icon">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -55,6 +92,12 @@ function renderList() {
 
   list.querySelectorAll('.list-card').forEach((card) => {
     card.querySelector('.icon-btn').addEventListener('click', () => openSheet(card.dataset.id));
+  });
+
+  list.querySelectorAll('.pending-card').forEach((card) => {
+    const id = card.dataset.id;
+    card.querySelector('.btn-approve').addEventListener('click', () => decide(id, true));
+    card.querySelector('.btn-reject').addEventListener('click', () => decide(id, false));
   });
 }
 

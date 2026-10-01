@@ -7,9 +7,20 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isAdmin() {
+    function profile() {
+      return get(/databases/$(database)/documents/drivers/$(request.auth.uid)).data;
+    }
+
+    // Conta aprovada e não bloqueada. Tolerante a docs antigos sem o campo
+    // `active` (tratados como ativos) — só quem tem active:false explícito
+    // (aguardando aprovação do gestor ou desativado) fica sem acesso.
+    function isActive() {
       return isSignedIn()
-        && get(/databases/$(database)/documents/drivers/$(request.auth.uid)).data.role == 'admin';
+        && (!('active' in profile()) || profile().active == true);
+    }
+
+    function isAdmin() {
+      return isActive() && profile().role == 'admin';
     }
 
     function isSelf(driverId) {
@@ -21,63 +32,90 @@ service cloud.firestore {
       return isSignedIn() && request.auth.token.email == 'alesk3@gmail.com';
     }
 
-    // Condutores: cada um lê/edita o próprio perfil; admin gerencia todos.
-    // Qualquer usuário logado pode ler a lista (nomes aparecem em turnos/histórico)
-    // e criar o próprio doc no cadastro (sempre como role "driver").
+    // Condutores: o próprio perfil é sempre legível (o app precisa saber se a
+    // conta está aguardando aprovação). Ler a lista dos outros exige conta ativa.
     match /drivers/{driverId} {
-      allow read: if isSignedIn();
+      allow read: if isSelf(driverId) || isActive();
+
+      // Auto-cadastro só cria conta PENDENTE: nunca nasce ativa nem admin.
+      // Quem aprova é o gestor, na tela Condutores.
       allow create: if isSelf(driverId)
-        && request.resource.data.role == 'driver';
+        && request.resource.data.role == 'driver'
+        && request.resource.data.active == false
+        && request.resource.data.pendingApproval == true;
+
+      // O condutor edita o próprio perfil (nome, matrícula, veículo padrão),
+      // mas não encosta em role/active/pendingApproval — senão se auto-aprovaria
+      // ou se reativaria depois de ser desativado.
       allow update: if isAdmin()
-        || (isSelf(driverId) && request.resource.data.role == resource.data.role);
+        || (isSelf(driverId)
+          && !request.resource.data.diff(resource.data).affectedKeys()
+               .hasAny(['role', 'active', 'pendingApproval']));
+
       allow delete: if isAdmin();
     }
 
-    // Veículos: condutor só lê; admin gerencia.
+    // Veículos: condutor ativo só lê; admin gerencia.
     match /vehicles/{vehicleId} {
-      allow read: if isSignedIn();
+      allow read: if isActive();
       allow write: if isAdmin();
     }
 
-    // Revisões / manutenção: qualquer logado lê; só admin registra.
+    // Revisões / manutenção: condutor ativo lê; só admin registra.
     match /maintenance/{id} {
-      allow read: if isSignedIn();
+      allow read: if isActive();
       allow write: if isAdmin();
     }
 
     // Turnos: condutor cria/edita os próprios enquanto abertos.
-    // Turno fechado é imutável (auditoria) — nem admin edita/deleta.
+    // Turno fechado é imutável (auditoria) — nem admin edita, fora o horário.
     match /trips/{tripId} {
-      // Turnos fechados ficam visíveis a qualquer condutor logado (handoff de
+      // Turnos fechados ficam visíveis a qualquer condutor ativo (handoff de
       // KM: o próximo condutor precisa ler o turno fechado do anterior, que
       // não é o dono do documento). Turnos abertos continuam privados.
       allow read: if isAdmin()
-        || (isSignedIn() && resource.data.driverId == request.auth.uid)
-        || (isSignedIn() && resource.data.status == 'closed');
-      // superadmin pode semear turnos de teste já fechados (fora do fluxo normal)
-      allow create: if (isSignedIn()
+        || (isActive() && resource.data.driverId == request.auth.uid)
+        || (isActive() && resource.data.status == 'closed');
+
+      // Condutor não pode marcar o próprio turno como teste (isso o esconderia
+      // dos Relatórios). O superadmin semeia turnos de teste pela outra via.
+      allow create: if (isActive()
           && request.resource.data.driverId == request.auth.uid
-          && request.resource.data.status == 'open')
+          && request.resource.data.status == 'open'
+          && !('isTest' in request.resource.data))
         || isSuperAdmin();
-      allow update: if (isSignedIn()
+
+      // driverId e isTest ficam imutáveis: senão o condutor reatribuiria o
+      // turno pra outra pessoa ou o esconderia dos relatórios.
+      allow update: if (isActive()
           && resource.data.driverId == request.auth.uid
-          && resource.data.status == 'open')
+          && resource.data.status == 'open'
+          && !request.resource.data.diff(resource.data).affectedKeys()
+               .hasAny(['driverId', 'isTest']))
         || isSuperAdmin()
         // admin pode ajustar SÓ o horário de início/fim, mesmo com o turno fechado
         || (isAdmin()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['startTime', 'endTime']));
+
       // turno fechado é imutável pra todo mundo, exceto a limpeza do superadmin
       allow delete: if isSuperAdmin();
     }
 
     // Avarias: condutor registra e lê; só admin resolve/edita depois.
-    // Leitura liberada pra logados (handoff: condutor precisa ver avarias anteriores do veículo).
+    // Leitura liberada pra condutor ativo (handoff: precisa ver avarias anteriores).
     match /damages/{damageId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn()
-        && request.resource.data.driverId == request.auth.uid;
+      allow read: if isActive();
+
+      // Não pode nascer resolvida (esconderia a avaria das contagens em aberto).
+      allow create: if isActive()
+        && request.resource.data.driverId == request.auth.uid
+        && request.resource.data.resolved == false;
+
       allow update: if isAdmin();
-      allow delete: if isAdmin() || isSuperAdmin();
+
+      // Avaria é a evidência central do app — apagar só pela conta de
+      // manutenção, mesma regra dos turnos.
+      allow delete: if isSuperAdmin();
     }
   }
 }

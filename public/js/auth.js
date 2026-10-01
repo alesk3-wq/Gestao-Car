@@ -10,7 +10,7 @@ import {
   onAuthStateChanged
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import {
-  doc, getDoc, setDoc, collection, query, where, getDocs, serverTimestamp
+  doc, getDoc, setDoc, serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 export function homeForRole(role) {
@@ -28,39 +28,30 @@ export async function login(email, password) {
   return { user: cred.user, driver };
 }
 
-export async function registerDriver({ name, matricula, email, password }) {
-  // Cria o Auth primeiro: a checagem de matrícula única lê a coleção
-  // "drivers" no Firestore, e as regras de segurança exigem estar
-  // autenticado pra isso (isSignedIn()). Se a matrícula já existir,
-  // desfaz o cadastro no Auth.
+// Cadastro cria a conta **pendente** (active: false + pendingApproval: true) —
+// o gestor aprova na tela Condutores. A matrícula não é pedida aqui: o condutor
+// preenche depois, na Home, já aprovado (antes disso ele não lê nada da frota,
+// então nem daria pra validar matrícula duplicada).
+export async function registerDriver({ name, email, password }) {
   const cred = await createUserWithEmailAndPassword(auth, email, password);
 
   try {
-    const dupes = await getDocs(
-      query(collection(db, 'drivers'), where('matricula', '==', matricula))
-    );
-    if (!dupes.empty) {
-      await deleteUser(cred.user);
-      throw new Error('matricula-exists');
-    }
-
     const driver = {
       name,
-      matricula,
+      matricula: null,
       email,
       role: 'driver',
       defaultVehicleId: null,
-      active: true,
+      active: false,
+      pendingApproval: true,
       createdAt: serverTimestamp()
     };
     await setDoc(doc(db, 'drivers', cred.user.uid), driver);
     return { user: cred.user, driver };
   } catch (error) {
-    // Qualquer falha depois de criar o Auth desfaz o usuário, pra não
-    // sobrar conta órfã sem perfil no Firestore.
-    if (error.message !== 'matricula-exists') {
-      await deleteUser(cred.user).catch(() => {});
-    }
+    // Falhou ao gravar o perfil: desfaz o usuário do Auth pra não sobrar
+    // conta órfã sem doc no Firestore.
+    await deleteUser(cred.user).catch(() => {});
     throw error;
   }
 }
@@ -72,6 +63,12 @@ export function resetPassword(email) {
 export async function logout() {
   await signOut(auth);
   window.location.replace('/login.html');
+}
+
+// Sai da conta sem redirecionar — usado logo após o cadastro, que fica
+// pendente de aprovação e não deve seguir logado.
+export function signOutSilent() {
+  return signOut(auth);
 }
 
 // Guard de rota: resolve com { user, driver } ou redireciona pro login.
@@ -89,6 +86,15 @@ export function requireAuth({ adminOnly = false } = {}) {
         // Auth existe mas sem perfil — volta pro login
         await signOut(auth);
         window.location.replace('/login.html');
+        return;
+      }
+      // Conta aguardando aprovação do gestor ou desativada. As regras do
+      // Firestore já bloqueiam a leitura da frota; aqui é só pra não deixar a
+      // pessoa numa tela quebrada sem entender o motivo.
+      if (driver.active === false) {
+        await signOut(auth);
+        const status = driver.pendingApproval ? 'pending' : 'blocked';
+        window.location.replace(`/login.html?status=${status}`);
         return;
       }
       if (adminOnly && driver.role !== 'admin') {

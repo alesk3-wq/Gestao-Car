@@ -68,6 +68,13 @@
                 }
                 try {
                     const driver = await getDriverProfile(user.uid);
+                    // Conta aguardando aprovação ou desativada: vai pro login
+                    // com o motivo, em vez de cair numa tela que o guard derruba.
+                    if (driver?.active === false) {
+                        const status = driver.pendingApproval ? 'pending' : 'blocked';
+                        window.location.replace(`/login.html?status=${status}`);
+                        return;
+                    }
                     window.location.replace(homeForRole(driver?.role));
                 } catch {
                     window.location.replace('/login.html');

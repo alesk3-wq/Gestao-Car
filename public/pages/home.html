@@ -36,6 +36,18 @@
             <p id="greetingDate"></p>
         </div>
 
+        <!-- Aparece só enquanto o condutor não tem matrícula preenchida -->
+        <div class="card section-gap" id="matriculaCard" hidden>
+            <h3>Complete seu cadastro</h3>
+            <p class="form-hint" style="margin:4px 0 12px">
+                Informe sua matrícula (identificador interno da empresa).
+            </p>
+            <div class="form-group" style="margin-bottom:12px">
+                <input type="text" id="matriculaInput" placeholder="Ex: 00123" inputmode="numeric">
+            </div>
+            <button class="btn btn-primary" id="btnSaveMatricula">Salvar matrícula</button>
+        </div>
+
         <div class="spinner" id="loading"></div>
 
         <!-- Sem turno aberto: escolha de veículo -->

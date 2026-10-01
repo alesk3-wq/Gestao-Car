@@ -1,4 +1,4 @@
-import { registerDriver, authErrorMessage } from '/js/auth.js';
+import { registerDriver, signOutSilent, authErrorMessage } from '/js/auth.js';
 import { registerServiceWorker } from '/js/utils.js';
 
 registerServiceWorker();
@@ -16,11 +16,10 @@ form.addEventListener('submit', async (e) => {
   e.preventDefault();
 
   const name = document.getElementById('name').value.trim();
-  const matricula = document.getElementById('matricula').value.trim();
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
 
-  if (!name || !matricula || !email || !password) {
+  if (!name || !email || !password) {
     showError('Preencha todos os campos.');
     return;
   }
@@ -34,8 +33,12 @@ form.addEventListener('submit', async (e) => {
   errorEl.classList.remove('visible');
 
   try {
-    await registerDriver({ name, matricula, email, password });
-    window.location.replace('/pages/home.html');
+    await registerDriver({ name, email, password });
+    // A conta nasce pendente: não segue logado, mostra o aviso de aprovação.
+    await signOutSilent().catch(() => {});
+    form.hidden = true;
+    document.querySelector('.auth-links').hidden = true;
+    document.getElementById('pendingMessage').hidden = false;
   } catch (error) {
     console.error('Erro no cadastro:', error);
     showError(authErrorMessage(error));

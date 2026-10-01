@@ -1,5 +1,5 @@
 import { requireAuth, logout } from '/js/auth.js';
-import { getOpenTrip, listVehicles, listDrivers, createTrip, updateTrip } from '/js/db.js';
+import { getOpenTrip, listVehicles, listDrivers, createTrip, updateTrip, updateDriver } from '/js/db.js';
 import { renderBottomNav } from '/js/nav.js';
 import {
   escapeHtml, formatCurrency, formatDuration, todayISO, showToast, registerServiceWorker,
@@ -30,6 +30,36 @@ if (driver.role === 'admin') {
 const isSuperAdmin = user.email === 'alesk3@gmail.com';
 if (isSuperAdmin) {
   document.getElementById('devTestToggle').hidden = false;
+}
+
+// A matrícula não é mais pedida no cadastro (que fica pendente e sem acesso à
+// frota) — o condutor preenche aqui depois de aprovado.
+if (!driver.matricula) initMatriculaPrompt();
+
+function initMatriculaPrompt() {
+  const card = document.getElementById('matriculaCard');
+  const input = document.getElementById('matriculaInput');
+  const btn = document.getElementById('btnSaveMatricula');
+
+  card.hidden = false;
+  btn.addEventListener('click', async () => {
+    const matricula = input.value.trim();
+    if (!matricula) {
+      showToast('Informe sua matrícula.', 'error');
+      return;
+    }
+    btn.disabled = true;
+    try {
+      await updateDriver(driver.id, { matricula });
+      driver.matricula = matricula;
+      card.hidden = true;
+      showToast('Matrícula salva.', 'success');
+    } catch (error) {
+      console.error(error);
+      showToast('Erro ao salvar. Tente novamente.', 'error');
+      btn.disabled = false;
+    }
+  });
 }
 
 document.getElementById('greetingName').textContent = `Olá, ${driver.name.split(' ')[0]}!`;

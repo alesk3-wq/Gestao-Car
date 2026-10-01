@@ -73,7 +73,7 @@ function renderList() {
       <div class="expense-icon">${EXPENSE_TYPE_ICONS[e.type] || '📌'}</div>
       <div class="expense-info">
         <div class="card-row">
-          <strong>${e.type[0].toUpperCase() + e.type.slice(1)}</strong>
+          <strong>${escapeHtml(e.type ? e.type[0].toUpperCase() + e.type.slice(1) : 'Despesa')}</strong>
         </div>
         <p class="expense-desc">${escapeHtml(e.description || '')}${e.receiptNumber ? ` · Recibo ${escapeHtml(e.receiptNumber)}` : ''}</p>
         ${e.at ? `<p class="expense-desc">${formatDateTime(e.at)}</p>` : ''}

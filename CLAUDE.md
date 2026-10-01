@@ -357,18 +357,17 @@ Referência estética: apps tipo Uber Driver / iFood Entregador — fundo preto,
   - `driver` → `pages/home.html`
   - `admin` → `pages/admin/history.html`
 
-### 6.4 Cadastro (`register.html`)
-Campos, nesta ordem:
-1. **Nome completo**
-2. **Matrícula** (identificador interno da empresa — string, obrigatório, único)
-3. **Email**
-4. **Senha** (mínimo 6 caracteres — mínimo do Firebase Auth)
+### 6.4 Cadastro (`register.html`) — conta nasce **pendente de aprovação**
+Campos: **Nome completo**, **Email**, **Senha** (mínimo 6 — mínimo do Firebase Auth).
+A **matrícula não é pedida aqui** (ver abaixo).
 
 Fluxo:
 - Cria user no Firebase Auth
-- Cria documento em `drivers/{uid}` com `{ name, matricula, email, role: "driver", active: true, createdAt }`
-- Valida `matricula` única antes de criar (query em `drivers` where `matricula == X`)
-- Redireciona pra `pages/home.html`
+- Cria `drivers/{uid}` com `{ name, matricula: null, email, role: "driver", active: false, pendingApproval: true, createdAt }`
+- **Faz signOut e mostra "Cadastro enviado — aguardando aprovação do gestor"** (não entra no app)
+- As regras só permitem o auto-cadastro criar conta **pendente**: `active == false && pendingApproval == true && role == 'driver'`. Ninguém se cadastra já ativo nem admin.
+- Enquanto `active == false`, o usuário **não lê nada da frota** (regras) e é barrado no login/guard com o motivo.
+- A **matrícula** é preenchida pelo próprio condutor depois de aprovado, num card "Complete seu cadastro" na Home (some quando preenchida). Sem validação de unicidade — o gestor confere ao aprovar. (Antes o cadastro fazia um query na coleção `drivers` pra checar duplicidade; isso exigia que um não-aprovado lesse todos os condutores, exatamente o que as regras agora fecham.)
 
 ### 6.5 Home do Condutor (`pages/home.html`)
 - Saudação com nome do condutor (auto-preenchido do Auth)
@@ -428,7 +427,7 @@ Três sub-abas (tabs no topo, controladas por JS — não são páginas separada
 
 ### 6.10 Admin — Cadastros, Histórico e Relatórios
 - `pages/admin/vehicles.html`: CRUD de veículos (lista + FAB pra adicionar)
-- `pages/admin/drivers.html`: CRUD de condutores (email vira login no Auth). Aqui o admin pode pré-criar contas antes do motorista se cadastrar sozinho.
+- `pages/admin/drivers.html`: CRUD de condutores (email vira login no Auth) + **aprovação de cadastros novos**. Quem tem `pendingApproval: true` aparece **no topo da lista** com badge "Aguardando aprovação" e botões **Aprovar** (`{ active: true, pendingApproval: false }`) / **Recusar** (`{ active: false, pendingApproval: false }` — reversível, o gestor reativa depois pelo sheet).
 - `pages/admin/history.html`: **lista** enxuta de turnos. Filtros (veículo, condutor, período) + faixa compacta de totais do filtro (turnos, KM total, despesas totais, avarias em aberto) + um **card-resumo por turno**, clicável → abre o relatório completo. Card com selinho **TESTE** quando `isTest`. Sem abas, sem despesas agregadas, sem timeline de avarias por veículo (foi removido daqui).
   - Filtro por veículo/condutor **+ período**: o `listTrips` de `db.js` manda só os `where()` de igualdade pro Firestore e filtra o intervalo de datas no cliente — igualdade + range em campos diferentes exigiria índice composto (ver seção 11).
 - `pages/admin/trip.html?id=<tripId>`: **relatório completo de um turno**. Cabeçalho, grid de indicadores, lista completa de paradas, despesas (com lightbox de recibo) e avarias do turno (`listDamagesByTrip`, com lightbox) — cada avaria em aberto tem botão **"Marcar como resolvida"** (`updateDamage({ resolved: true, resolvedAt: serverTimestamp() })`; é o único lugar da UI onde isso acontece). Botão **"Exportar PDF"** = `window.print()` + `css/pages/report.css` (`@media print`: fundo branco, sem cromo de app, cards sem quebra, título "Relatório de Turno — placa — data"). Sem dependência de PDF — o iOS tem "imprimir em PDF" nativo (folha de impressão → pinch na prévia → Compartilhar → Salvar em Arquivos).
@@ -468,16 +467,19 @@ Três sub-abas (tabs no topo, controladas por JS — não são páginas separada
 
 ## 9. Regras de Segurança Firestore (implementado em `firestore.rules`)
 
-- Condutor lê/escreve seus próprios `trips` **enquanto abertos**. Turnos com `status == 'closed'` ficam legíveis por **qualquer condutor logado** (não só o dono) — necessário pro handoff de KM entre turnos de condutores diferentes.
-- Condutor lê e cria `damages` (qualquer condutor logado lê todas, pro handoff de avarias do veículo); só admin edita/resolve.
-- Condutor lê `vehicles` e `drivers` mas não escreve (exceto o próprio perfil, sem poder trocar `role` sozinho).
-- `maintenance` (revisões): qualquer logado lê; só admin escreve.
+- **`isActive()` é o portão de tudo.** Toda leitura/escrita de `vehicles`, `maintenance`, `trips` e `damages` exige conta **ativa** — não basta estar logado. Implementado como `!('active' in profile()) || profile().active == true`: tolerante a docs antigos sem o campo (tratados como ativos), bloqueia só quem tem `active: false` explícito (aguardando aprovação ou desativado). Isso é o que impede um cadastro novo (ou um condutor desativado) de ler a frota.
+- **`drivers`**: o **próprio** perfil é sempre legível (`isSelf`) — o app precisa disso pra saber que a conta está pendente. Ler a lista dos outros exige conta ativa. `create` só aceita conta **pendente** (`role == 'driver' && active == false && pendingApproval == true`). No `update` do próprio perfil, o condutor **não pode tocar em `role`/`active`/`pendingApproval`** (`!affectedKeys().hasAny([...])`) — senão se auto-aprovaria ou se reativaria depois de desativado.
+- Condutor lê/escreve seus próprios `trips` **enquanto abertos**. Turnos com `status == 'closed'` ficam legíveis por **qualquer condutor ativo** (não só o dono) — necessário pro handoff de KM entre turnos de condutores diferentes.
+- **`trips`**: no `create`, condutor comum **não pode mandar `isTest`** (esconderia o turno dos Relatórios); no `update`, `driverId` e `isTest` são **imutáveis** (`!affectedKeys().hasAny(['driverId', 'isTest'])`) — senão daria pra reatribuir o próprio turno pra outra pessoa ou ocultá-lo. O superadmin passa por fora pra semear teste.
+- Condutor ativo lê e cria `damages`; `create` **não pode nascer `resolved: true`** (esconderia a avaria das contagens em aberto). Só admin edita/resolve. **Apagar avaria: só superadmin** — é a evidência central do app, mesma regra dos turnos.
+- Condutor lê `vehicles` e `drivers` mas não escreve (exceto o próprio perfil, com as restrições acima).
+- `maintenance` (revisões): condutor ativo lê; só admin escreve.
 - Admin lê tudo. `update` de `trips` pelo admin: **só** `startTime`/`endTime`
   (`request.resource.data.diff(resource.data).affectedKeys().hasOnly(['startTime','endTime'])`),
   inclusive em turno fechado — é o ajuste de horário do gestor no `trip.html`. Todo o resto do turno segue imutável pós-fechamento.
 - Ninguém deleta `trips` fechados (auditoria) — **exceto o superadmin** (ver abaixo). Admin comum também não.
 - **`isSuperAdmin()`** = `request.auth.token.email == 'alesk3@gmail.com'` (conta única de manutenção/testes). Pode: `create`/`update` de `trips` fora do fluxo normal (semear turno já `closed`, com qualquer `driverId`, marcar/desmarcar `isTest`), `delete` de `trips` e `delete` de `damages`.
-- **`storage.rules`**: `create`/`update` de foto = qualquer logado (imagem, <10MB); `delete` de foto = só o e-mail do superadmin (Storage rules não leem o Firestore, então trava no `request.auth.token.email`).
+- **`storage.rules`**: `create` de foto = qualquer logado (imagem, <10MB). **`update` é proibido de propósito** — `uploadPhoto()` sempre gera nome único com timestamp, então ninguém precisa sobrescrever, e permitir isso deixaria qualquer logado trocar a foto de avaria de outro turno (a evidência central do app). `delete` = só o e-mail do superadmin (Storage rules não leem o Firestore, então trava no `request.auth.token.email`).
 
 Qualquer mudança em `firestore.rules` exige `firebase deploy --only firestore:rules` (deploy separado do `hosting`); mexeu em `storage.rules` também → `firebase deploy --only firestore:rules,storage:rules`. Já aconteceu de uma feature parecer "quebrada" só porque a regra nova não tinha sido publicada.
 

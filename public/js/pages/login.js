@@ -1,4 +1,4 @@
-import { login, resetPassword, authErrorMessage, homeForRole } from '/js/auth.js';
+import { login, resetPassword, authErrorMessage, homeForRole, signOutSilent } from '/js/auth.js';
 import { showToast, registerServiceWorker } from '/js/utils.js';
 
 registerServiceWorker();
@@ -10,6 +10,18 @@ const errorEl = document.getElementById('errorMessage');
 function showError(msg) {
   errorEl.textContent = msg;
   errorEl.classList.add('visible');
+}
+
+const BLOCKED_MESSAGES = {
+  pending: 'Sua conta ainda está aguardando aprovação do gestor da frota.',
+  blocked: 'Sua conta está desativada. Procure o gestor da frota.'
+};
+
+// Motivo vindo do guard de rota (requireAuth derrubou a sessão).
+const statusFromGuard = new URLSearchParams(location.search).get('status');
+if (BLOCKED_MESSAGES[statusFromGuard]) {
+  showError(BLOCKED_MESSAGES[statusFromGuard]);
+  history.replaceState(null, '', location.pathname);
 }
 
 form.addEventListener('submit', async (e) => {
@@ -28,6 +40,15 @@ form.addEventListener('submit', async (e) => {
 
   try {
     const { driver } = await login(email, password);
+    // Conta pendente/desativada: nem entra, avisa aqui mesmo em vez de
+    // deixar o guard da próxima tela derrubar a sessão.
+    if (driver?.active === false) {
+      await signOutSilent().catch(() => {});
+      showError(BLOCKED_MESSAGES[driver.pendingApproval ? 'pending' : 'blocked']);
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
+      return;
+    }
     window.location.replace(homeForRole(driver?.role));
   } catch (error) {
     console.error('Erro no login:', error);
