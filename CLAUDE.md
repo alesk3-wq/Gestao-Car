@@ -481,7 +481,7 @@ Três sub-abas (tabs no topo, controladas por JS — não são páginas separada
 - **`isSuperAdmin()`** = `request.auth.token.email == 'alesk3@gmail.com'` (conta única de manutenção/testes). Pode: `create`/`update` de `trips` fora do fluxo normal (semear turno já `closed`, com qualquer `driverId`, marcar/desmarcar `isTest`), `delete` de `trips` e `delete` de `damages`.
 - **`storage.rules`**: `create` de foto = qualquer logado (imagem, <10MB). **`update` é proibido de propósito** — `uploadPhoto()` sempre gera nome único com timestamp, então ninguém precisa sobrescrever, e permitir isso deixaria qualquer logado trocar a foto de avaria de outro turno (a evidência central do app). `delete` = só o e-mail do superadmin (Storage rules não leem o Firestore, então trava no `request.auth.token.email`).
 
-Qualquer mudança em `firestore.rules` exige `firebase deploy --only firestore:rules` (deploy separado do `hosting`); mexeu em `storage.rules` também → `firebase deploy --only firestore:rules,storage:rules`. Já aconteceu de uma feature parecer "quebrada" só porque a regra nova não tinha sido publicada.
+Qualquer mudança em `firestore.rules` exige `firebase deploy --only firestore:rules` (deploy separado do `hosting`); mexeu em `storage.rules` também → `firebase deploy --only firestore:rules,storage` (**`storage`, não `storage:rules`** — esse target não existe e o deploy falha com "Could not find rules for the following storage targets: rules"). Já aconteceu de uma feature parecer "quebrada" só porque a regra nova não tinha sido publicada.
 
 ## 10. Roadmap Sugerido de Implementação
 
