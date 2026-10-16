@@ -24,7 +24,8 @@ function vehicleLabel(vehicleId) {
   return v ? `${v.model} (${v.plate})` : 'Sem veículo padrão';
 }
 
-// Cadastro novo nasce pendente (ver auth.js) — o gestor libera aqui.
+// Cadastro novo nasce pendente (ver auth.js) — o gestor libera aqui e é ele
+// quem informa a matrícula (ID interno da empresa; o condutor não preenche).
 function pendingCard(d) {
   return `
     <div class="card pending-card" data-id="${d.id}">
@@ -33,6 +34,10 @@ function pendingCard(d) {
         <span class="badge badge-warning">Aguardando aprovação</span>
       </div>
       <p class="card-label" style="margin-top:4px">${escapeHtml(d.email || '')}</p>
+      <div class="form-group" style="margin:12px 0 0">
+        <label>Matrícula</label>
+        <input type="text" class="input-matricula" placeholder="Ex: 00123" inputmode="numeric">
+      </div>
       <div class="dev-row-actions">
         <button type="button" class="btn btn-primary btn-sm btn-approve">Aprovar</button>
         <button type="button" class="btn btn-secondary btn-sm btn-reject">Recusar</button>
@@ -41,12 +46,35 @@ function pendingCard(d) {
   `;
 }
 
-async function decide(driverId, approved) {
+// A lista completa já está carregada no `drivers`, então a checagem é local
+// (best-effort: ainda há race se dois gestores aprovarem ao mesmo tempo).
+function matriculaEmUso(matricula, exceptId) {
+  return drivers.some((x) => x.id !== exceptId && (x.matricula || '') === matricula);
+}
+
+async function decide(driverId, approved, card) {
   const d = drivers.find((x) => x.id === driverId);
-  if (!approved && !confirm(`Recusar o acesso de ${d?.name || 'este condutor'}?`)) return;
+  const data = { active: approved, pendingApproval: false };
+
+  if (approved) {
+    const input = card.querySelector('.input-matricula');
+    const matricula = input.value.trim();
+    if (!matricula) {
+      showToast('Informe a matrícula antes de aprovar.', 'error');
+      input.focus();
+      return;
+    }
+    if (matriculaEmUso(matricula, driverId)) {
+      showToast('Essa matrícula já está em uso por outro condutor.', 'error');
+      input.focus();
+      return;
+    }
+    data.matricula = matricula;
+  } else if (!confirm(`Recusar o acesso de ${d?.name || 'este condutor'}?`)) {
+    return;
+  }
 
   try {
-    const data = { active: approved, pendingApproval: false };
     await updateDriver(driverId, data);
     Object.assign(d, data);
     showToast(approved ? 'Condutor aprovado.' : 'Cadastro recusado.', approved ? 'success' : '');
@@ -96,8 +124,8 @@ function renderList() {
 
   list.querySelectorAll('.pending-card').forEach((card) => {
     const id = card.dataset.id;
-    card.querySelector('.btn-approve').addEventListener('click', () => decide(id, true));
-    card.querySelector('.btn-reject').addEventListener('click', () => decide(id, false));
+    card.querySelector('.btn-approve').addEventListener('click', () => decide(id, true, card));
+    card.querySelector('.btn-reject').addEventListener('click', () => decide(id, false, card));
   });
 }
 
@@ -105,7 +133,8 @@ function openSheet(driverId) {
   editingId = driverId;
   const d = drivers.find((x) => x.id === driverId);
 
-  document.getElementById('drvInfo').value = `${d.name} · Mat. ${d.matricula || '—'}`;
+  document.getElementById('drvInfo').value = `${d.name} · ${d.email || '—'}`;
+  document.getElementById('drvMatricula').value = d.matricula || '';
   document.getElementById('drvVehicle').innerHTML =
     '<option value="">Sem veículo padrão</option>' +
     vehicles.map((v) => `<option value="${v.id}">${escapeHtml(v.model)} — ${escapeHtml(v.plate)}</option>`).join('');
@@ -126,8 +155,16 @@ async function save() {
   const btn = document.getElementById('btnSaveDriver');
   btn.disabled = true;
 
+  const matricula = document.getElementById('drvMatricula').value.trim();
+  if (matricula && matriculaEmUso(matricula, editingId)) {
+    showToast('Essa matrícula já está em uso por outro condutor.', 'error');
+    btn.disabled = false;
+    return;
+  }
+
   try {
     const data = {
+      matricula: matricula || null,
       defaultVehicleId: document.getElementById('drvVehicle').value || null,
       role: document.getElementById('drvRole').value,
       active: document.getElementById('drvActive').value === 'true'
